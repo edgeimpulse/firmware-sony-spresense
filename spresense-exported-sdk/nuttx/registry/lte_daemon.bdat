@@ -1,0 +1,1 @@
+{ "lte_daemon", SCHED_PRIORITY_DEFAULT, 2048, lte_daemon_main },

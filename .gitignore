@@ -1,0 +1,21 @@
+# Directories
+build/
+.vscode/
+edge-impulse-sdk/
+edge_impulse/edge-impulse-sdk/
+
+# Prerequisites
+*.d
+
+# Object files
+*.o
+*.ko
+*.obj
+*.elf
+
+# Linker output
+*.ilk
+*.map
+*.exp
+
+tools/__pycache__/xmodem.cpython-38.pyc

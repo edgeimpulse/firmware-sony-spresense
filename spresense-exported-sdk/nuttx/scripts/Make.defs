@@ -1,0 +1,39 @@
+ARCHCFLAGS       = -fno-builtin -mabi=aapcs -ffunction-sections -fdata-sections -mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=hard
+ARCHCXXFLAGS     = -fno-builtin -fno-exceptions -fno-rtti -std=c++98 -mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=hard
+ARCHPICFLAGS     = -fpic -msingle-pic-base -mpic-register=r10
+ARCHWARNINGS     = -Wall -Wstrict-prototypes -Wshadow -Wundef
+ARCHWARNINGSXX   = -Wall -Wshadow -Wundef
+ARCHOPTIMIZATION = -g -Os -fno-strict-aliasing -fno-strength-reduce -fomit-frame-pointer
+WINTOOL          = 
+CROSSDEV         = arm-none-eabi-
+CC               = arm-none-eabi-gcc
+CXX              = arm-none-eabi-g++
+CPP              = arm-none-eabi-gcc -E
+LD               = arm-none-eabi-ld
+AR               = arm-none-eabi-ar rcs
+NM               = arm-none-eabi-nm
+STRIP            = arm-none-eabi-strip
+OBJCOPY          = arm-none-eabi-objcopy
+OBJDUMP          = arm-none-eabi-objdump
+NXFLATLDFLAGS1   = -r -d -warn-common
+NXFLATLDFLAGS2   = -r -d -warn-common -T/home/arjan/Documents/EdgeImpulse/Firmware/sony/spres_wget/spresense/nuttx/binfmt/libnxflat/gnu-nxflat-pcrel.ld -no-check-sections
+OBJEXT           = .o
+LIBEXT           = .a
+EXEEXT           = 
+HOSTCC           = gcc
+HOSTINCLUDES     = -I.
+HOSTCFLAGS       = -Wall -Wstrict-prototypes -Wshadow -Wundef -g -pipe
+HOSTLDFLAGS      = 
+HOSTEXEEXT       = 
+DIRLINK          = 
+DIRUNLINK        = 
+MKDEP            = /home/arjan/Documents/EdgeImpulse/Firmware/sony/spres_wget/spresense/nuttx/tools/mkdeps
+LDSCRIPT         = ramconfig.ld
+LDFLAGS      = 
+HEAD_OBJ     = 
+EXTRA_OBJS   = 
+LDSTARTGROUP = 
+LDLIBS       = 
+EXTRA_LIBS   = 
+LIBGCC       = 
+LDENDGROUP   = 
