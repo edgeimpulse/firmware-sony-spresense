@@ -22,6 +22,7 @@
 
 #include <vector>
 
+#include "edge-impulse-sdk/dsp/EiProfiler.h"
 #include "edge-impulse-sdk/porting/lib/EiCamera.h"
 #include "edge-impulse-sdk/porting/lib/ei_device_interface.h"
 #include "edge-impulse-sdk/porting/lib/ei_image_lib.h"
@@ -146,67 +147,38 @@ static bool release_camimage(int fd, struct v4l2_buffer *v4l2_buf)
     return true;
 }
 
-// Note, image must be aligned on a 32 BYTE boundary!!
-static bool captureYUV422(uint8_t *image, uint32_t image_size_B, uint16_t hsize, uint16_t vsize)
-{
-    int ret;
-    int v_fd;
-    struct v4l2_buffer v4l2_buf;
-
-    ret = video_initialize("/dev/video");
-    if (ret != 0) {
-        ei_printf("ERROR: Failed to initialize video: errno = %d\n", errno);
-        return false;
-    }
-
-    v_fd = open("/dev/video", 0);
-    if (v_fd < 0) {
-        ei_printf("ERROR: Failed to open video.errno = %d\n", errno);
-        return false;
-    }
-
-    bool isOK;
-
-    isOK = camera_prepare(v_fd, image, image_size_B, hsize, vsize);
-    if (!isOK) {
-        return false;
-    }
-
-    // Start still capture.  This is only used for V4L2_BUF_TYPE_STILL_CAPTURE
-    ret = ioctl(v_fd, VIDIOC_TAKEPICT_START, 0);
-    if (ret < 0) {
-        ei_printf("Failed to start taking picture\n");
-        return false;
-    }
-
-    // This writes the buffer assigned in camera_prepare()
-    isOK = get_camimage(v_fd, &v4l2_buf, V4L2_BUF_TYPE_STILL_CAPTURE);
-    if (!isOK) {
-        return false;
-    }
-
-    isOK = release_camimage(v_fd, &v4l2_buf);
-    if (!isOK) {
-        return false;
-    }
-
-    // Stop still capture
-    ret = ioctl(v_fd, VIDIOC_TAKEPICT_STOP, false);
-    if (ret < 0) {
-        ei_printf("Failed to stop taking picture\n");
-        return false;
-    }
-
-    close(v_fd);
-
-    video_uninitialize();
-
-    return true;
-}
-
 class EiCameraSony : public EiCamera {
+public:
+    // see README, need to close and re open for certain operations
+    bool init() override
+    {
+
+        //lazy init the handle
+        int ret = video_initialize("/dev/video");
+        if (ret != 0) {
+            ei_printf("ERROR: Failed to initialize video: errno = %d\n", errno);
+            return false;
+        }
+
+        v_fd = open("/dev/video", 0);
+        if (v_fd < 0) {
+            ei_printf("ERROR: Failed to open video.errno = %d\n", errno);
+            v_fd = NULL;
+            return false;
+        } 
+        return true;
+    }
+
+    bool deinit() override
+    {
+        close(v_fd);
+        video_uninitialize();
+        v_fd = NULL; //we check v_fd before using, so it's cool to be square, err, NULL!
+        return true;
+    }
+
     bool ei_camera_capture_rgb888_packed_big_endian(
-        uint8_t *image, 
+        uint8_t *image,
         unsigned int image_size_B, // using raw types b/c of stdint.h int32 mismatch!
         uint16_t hsize,
         uint16_t vsize) override
@@ -229,6 +201,54 @@ class EiCameraSony : public EiCamera {
         YUV422toRGB888(image, image, yuv_buf_size, BIG_ENDIAN_ORDER);
         return true;
     }
+
+    // Note, image must be aligned on a 32 BYTE boundary!!
+    bool captureYUV422(uint8_t *image, uint32_t image_size_B, uint16_t hsize, uint16_t vsize)
+    {
+        if(!v_fd) {
+            ei_printf("ERR: Friends don't let friends dereference NULL pointers! Init camera before capturing\n");
+            return false;
+        }
+
+        int ret;
+        struct v4l2_buffer v4l2_buf;
+        bool isOK;
+
+        isOK = camera_prepare(v_fd, image, image_size_B, hsize, vsize);
+        if (!isOK) {
+            return false;
+        }
+
+        // Start still capture.  This is only used for V4L2_BUF_TYPE_STILL_CAPTURE
+        ret = ioctl(v_fd, VIDIOC_TAKEPICT_START, 0);
+        if (ret < 0) {
+            ei_printf("Failed to start taking picture\n");
+            return false;
+        }
+
+        // This writes the buffer assigned in camera_prepare()
+        isOK = get_camimage(v_fd, &v4l2_buf, V4L2_BUF_TYPE_STILL_CAPTURE);
+        if (!isOK) {
+            return false;
+        }
+
+        isOK = release_camimage(v_fd, &v4l2_buf);
+        if (!isOK) {
+            return false;
+        }
+
+        // Stop still capture
+        ret = ioctl(v_fd, VIDIOC_TAKEPICT_STOP, false);
+        if (ret < 0) {
+            ei_printf("Failed to stop taking picture\n");
+            return false;
+        }
+
+        return true;
+    }
+    // nuttx camera handle
+    int v_fd = NULL;
+
 };
 
 EiCamera *EiCamera::get_camera()

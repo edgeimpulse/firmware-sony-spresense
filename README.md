@@ -74,6 +74,10 @@ The `edge-impulse-run-impulse` tool is used to start and run the impulse on your
 
 The nuttx stdint.h defines int32 as unsigned long, whereas the stdlib.h that ships with ARM GCC defines int32 as unsigned int.  These are the same size (https://developer.arm.com/documentation/dui0472/k/C-and-C---Implementation-Details/Basic-data-types-in-ARM-C-and-C--), so from a stack perspective, it doesn't matter, but a C++ linker will treat a different in int32 as a function overload (so you'll get a missing function error from the linker if you're not careful)
 
+### Notes
+- The video driver doesn't like to change resolutions after being opened.  This prevents lazy initialization and using the same handle for the entire life of program.
+ - Thus, we open and close on entering and exiting snapshot stream, and on each snapshot for ingestion or inference
+
 ## Troubleshooting
 
 **undefined reference to `_impure_ptr'**
