@@ -158,7 +158,7 @@ SRC_APP_CXX += \
 	ei_main.cpp \
 	ei_run_impulse.cpp \
 	$(notdir $(wildcard edge_impulse/edge-impulse-sdk/porting/sony/*.cpp)) \
-	$(notdir $(wildcard edge_impulse/edge-impulse-sdk/porting/lib/*.cpp)) \
+	$(notdir $(wildcard edge_impulse/firmware-sdk/*.cpp)) \
 	$(notdir $(wildcard edge_impulse/edge-impulse-sdk/dsp/dct/*.cpp)) \
 	$(notdir $(wildcard edge_impulse/edge-impulse-sdk/dsp/kissfft/*.cpp)) \
 	$(notdir $(wildcard edge_impulse/ingestion-sdk-platform/sony-spresense/*.cpp)) \
@@ -186,7 +186,7 @@ SRC_APP_C += \
 
 VPATH += stdlib \
 	edge_impulse/edge-impulse-sdk/porting/sony \
-	edge_impulse/edge-impulse-sdk/porting/lib \
+	edge_impulse/firmware-sdk \
 	edge_impulse/ingestion-sdk-platform/sony-spresense \
 	edge_impulse/ingestion-sdk-c \
 	edge_impulse/repl \

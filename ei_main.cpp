@@ -29,7 +29,7 @@
 #include "ei_device_sony_spresense.h"
 #include "ei_sony_spresense_fs_commands.h"
 #include "numpy.hpp"
-#include "edge-impulse-sdk/porting/lib/ei_image_lib.h"
+#include "firmware-sdk/ei_image_lib.h"
 #include "at_cmds.h"
 
 /**

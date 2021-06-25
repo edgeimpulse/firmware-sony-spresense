@@ -270,7 +270,7 @@ extern "C" bool spresense_openFile(const char *name, bool write)
         success = true;
     }
     else {
-        ei_printf("File cannot open %s\r\n", name);
+        ei_printf("File cannot open %s is the SD card inserted?\r\n", name);
         success = false;
     }
 

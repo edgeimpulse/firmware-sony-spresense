@@ -24,8 +24,8 @@
 #define EI_DEVICE_SONY_SPRESENSE
 
 /* Include ----------------------------------------------------------------- */
-#include "edge-impulse-sdk/porting/lib/ei_device_info_lib.h"
-#include "edge-impulse-sdk/porting/lib/ei_device_interface.h"
+#include "firmware-sdk/ei_device_info_lib.h"
+#include "firmware-sdk/ei_device_interface.h"
 
 #define DEFAULT_BAUD 115200
 #define MAX_BAUD 921600

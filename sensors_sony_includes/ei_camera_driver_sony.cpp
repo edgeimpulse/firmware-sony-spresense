@@ -23,9 +23,9 @@
 #include <vector>
 
 #include "edge-impulse-sdk/dsp/EiProfiler.h"
-#include "edge-impulse-sdk/porting/lib/EiCamera.h"
-#include "edge-impulse-sdk/porting/lib/ei_device_interface.h"
-#include "edge-impulse-sdk/porting/lib/ei_image_lib.h"
+#include "firmware-sdk/ei_camera_interface.h"
+#include "firmware-sdk/ei_device_interface.h"
+#include "firmware-sdk/ei_image_lib.h"
 
 #include <errno.h>
 #include <fcntl.h>

@@ -37,6 +37,9 @@ extern "C" bool spresense_closeFile(const char *name);
 extern "C" bool spresense_writeToFile(const char *name, const uint8_t *buf, uint32_t length);
 extern "C" uint32_t spresense_readFromFile(const char *name, uint8_t *buf, uint32_t length);
 
+/* Private variables ------------------------------------------------------- */
+static bool sd_card_inserted = true;
+
 #if (SAMPLE_MEMORY == RAM)
 static uint8_t ram_memory[SIZE_RAM_BUFFER];
 #endif
@@ -80,7 +83,9 @@ int ei_sony_spresense_fs_load_config(uint32_t *config, uint32_t config_size)
 #elif (SAMPLE_MEMORY == MICRO_SD)
 
     if(spresense_openFile((const char *)FILE_NAME_CONFIG, false) == false) {
-        retVal = SONY_SPRESENSE_FS_CMD_FILE_ERROR;
+        /* Missing SD card, return OK so default config can be loaded */
+        sd_card_inserted = false;
+        retVal = SONY_SPRESENSE_FS_CMD_OK;
     }
     else if(spresense_readFromFile(FILE_NAME_CONFIG, (uint8_t *)config, config_size) < 0) {
         retVal = SONY_SPRESENSE_FS_CMD_READ_ERROR;
@@ -121,7 +126,11 @@ int ei_sony_spresense_fs_save_config(const uint32_t *config, uint32_t config_siz
 
 #elif (SAMPLE_MEMORY == MICRO_SD)
 
-    if(spresense_openFile((const char *)FILE_NAME_CONFIG, true) == false) {
+    if(sd_card_inserted == false) {
+        retVal = SONY_SPRESENSE_FS_CMD_OK;
+    }
+    else if(spresense_openFile((const char *)FILE_NAME_CONFIG, true) == false) {
+
         retVal = SONY_SPRESENSE_FS_CMD_FILE_ERROR;
     }
     else if(spresense_writeToFile((const char *)FILE_NAME_CONFIG, (const uint8_t *)config, config_size) == false) {
@@ -285,7 +294,12 @@ uint32_t ei_sony_spresense_fs_get_block_size(void)
 #elif (SAMPLE_MEMORY == SERIAL_FLASH)
     return MX25R_SECTOR_SIZE;
 #elif (SAMPLE_MEMORY == MICRO_SD)
-    return FILE_BLOCK_SIZE;
+    if(sd_card_inserted == false) {
+        return 0;
+    }
+    else {
+        return FILE_BLOCK_SIZE;
+    }
 #endif
 }
 

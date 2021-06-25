@@ -270,7 +270,7 @@ void run_nn_continuous(bool debug)
 }
 
 #elif defined(EI_CLASSIFIER_SENSOR) && EI_CLASSIFIER_SENSOR == EI_CLASSIFIER_SENSOR_CAMERA
-#include "edge-impulse-sdk/porting/lib/EiImageNN.h"
+#include "firmware-sdk/ei_image_nn.h"
 #include <memory>
 #include "malloc.h" //for memalign
 

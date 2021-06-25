@@ -70,7 +70,7 @@ File::File(const char *name, uint8_t mode)
       retry++;
       if (retry >= 20) {
         retry = 0;
-        printf("Insert SD card!\n");
+        return;
       }
       usleep(100 * 1000); // 100 msec
     }

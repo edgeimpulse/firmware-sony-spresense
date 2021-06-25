@@ -24,7 +24,7 @@
 #define _EDGE_IMPULSE_AT_COMMANDS_CONFIG_H_
 
 #include "at_cmd_interface.h"
-#include "edge-impulse-sdk/porting/lib/at_base64_lib.h"
+#include "firmware-sdk/at_base64_lib.h"
 #include "ei_config.h"
 
 #define EDGE_IMPULSE_AT_COMMAND_VERSION        "1.6.0"
