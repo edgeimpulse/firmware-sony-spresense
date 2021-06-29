@@ -83,11 +83,22 @@ int ei_sony_spresense_fs_load_config(uint32_t *config, uint32_t config_size)
 #elif (SAMPLE_MEMORY == MICRO_SD)
 
     if(spresense_openFile((const char *)FILE_NAME_CONFIG, false) == false) {
-        /* Missing SD card, return OK so default config can be loaded */
-        sd_card_inserted = false;
-        retVal = SONY_SPRESENSE_FS_CMD_OK;
+
+        /* Try to create and write to the config file */
+        if(spresense_openFile((const char *)FILE_NAME_CONFIG, true) == false) {
+            /* Missing SD card, return OK so default config can be loaded */
+            ei_printf("File cannot open %s is the SD card inserted?\r\n", FILE_NAME_CONFIG);
+            sd_card_inserted = false;
+        }
+        else {
+            spresense_writeToFile((const char *)FILE_NAME_CONFIG, (const uint8_t *)config, config_size);
+            spresense_closeFile((const char *)FILE_NAME_CONFIG);
+        }
+
+        return SONY_SPRESENSE_FS_CMD_OK;
     }
-    else if(spresense_readFromFile(FILE_NAME_CONFIG, (uint8_t *)config, config_size) < 0) {
+
+    if(spresense_readFromFile(FILE_NAME_CONFIG, (uint8_t *)config, config_size) < 0) {
         retVal = SONY_SPRESENSE_FS_CMD_READ_ERROR;
     }
     else if(spresense_closeFile((const char *)FILE_NAME_CONFIG) == false) {

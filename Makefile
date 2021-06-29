@@ -100,6 +100,7 @@ CFLAGS += \
 	-Wno-write-strings \
 	-Wno-sign-compare \
 	-Wunused-function \
+	-Wno-unused-value \
 	-Werror=return-type \
 	-fno-delete-null-pointer-checks \
 	-fomit-frame-pointer \

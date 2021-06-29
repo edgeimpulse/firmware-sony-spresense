@@ -72,7 +72,7 @@ class File;
 extern "C" void  outputDeviceCallback(uint32_t);
 
 /*--------------------------------------------------------------------------*/
-#define print_err printf
+#define print_err (void)
 
 #ifdef BRD_DEBUG
 #define print_dbg(...) printf(__VA_ARGS__)
@@ -217,7 +217,7 @@ public:
    *
    */
   err_t setPlayerMode(
-      uint8_t device, /**< Select output device. AS_SETPLAYER_OUTPUTDEVICE_SPHP or 
+      uint8_t device, /**< Select output device. AS_SETPLAYER_OUTPUTDEVICE_SPHP or
                            AS_SETPLAYER_OUTPUTDEVICE_I2SOUTPUT. */
       uint8_t sp_drv /**< Select audio speaker driver mode. AS_SP_DRV_MODE_LINEOUT or
                           AS_SP_DRV_MODE_1DRIVER or AS_SP_DRV_MODE_2DRIVER or AS_SP_DRV_MODE_4DRIVER */
@@ -231,7 +231,7 @@ public:
    *
    */
   err_t setPlayerMode(
-      uint8_t device,          /**< Select output device. AS_SETPLAYER_OUTPUTDEVICE_SPHP or 
+      uint8_t device,          /**< Select output device. AS_SETPLAYER_OUTPUTDEVICE_SPHP or
                                     AS_SETPLAYER_OUTPUTDEVICE_I2SOUTPUT. */
       uint8_t sp_drv,          /**< Select audio speaker driver mode. AS_SP_DRV_MODE_LINEOUT or
                                     AS_SP_DRV_MODE_1DRIVER or AS_SP_DRV_MODE_2DRIVER or AS_SP_DRV_MODE_4DRIVER */
@@ -903,7 +903,7 @@ private:
   err_t powerOff(void);
 
   /* Functions for initialization Encoder */
-	
+
   err_t initMicFrontend(uint8_t ch_num, uint8_t bit_length, uint16_t sample);
   err_t init_recorder_wav(AudioCommand* command, uint32_t sampling_rate, uint8_t bit_length, uint8_t channel_number);
   err_t init_recorder_mp3(AudioCommand* command, uint32_t sampling_rate, uint8_t bit_length, uint8_t channel_number);
@@ -933,4 +933,3 @@ extern AudioClass Audio;
 
 // #endif //__cplusplus
 #endif //Audio_h
-

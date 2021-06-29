@@ -177,30 +177,34 @@ int spresense_getAcc(float acc_val[3])
  */
 int spresense_setupAudio(void)
 {
+    int retVal = 0;
+
     theAudio = AudioClass::getInstance();
 
-    theAudio->begin(audio_attention_cb);
+    retVal = theAudio->begin();
 
     /* Select input device as microphone */
-    theAudio->setRecorderMode(AS_SETRECDR_STS_INPUTDEVICE_MIC, 220, SIMPLE_FIFO_BUF_SIZE, false);
+    retVal |= theAudio->setRecorderMode(AS_SETRECDR_STS_INPUTDEVICE_MIC, 220, SIMPLE_FIFO_BUF_SIZE, false);
 
     /*
     * Set PCM capture sapling rate parameters to 48 kb/s. Set channel number 4
     * Search for PCM codec in "/mnt/sd0/BIN" directory
     */
-    theAudio->initRecorder(AS_CODECTYPE_PCM, "/mnt/sd0/BIN", AS_SAMPLINGRATE_16000, AS_CHANNEL_MONO);
+    retVal |= theAudio->initRecorder(AS_CODECTYPE_PCM, "/mnt/sd0/BIN", AS_SAMPLINGRATE_16000, AS_CHANNEL_MONO);
 
-    return 0;
+    return retVal;
 }
 
 /**
  * @brief Send command to start recording audio
  *
  */
-void spresense_startStopAudio(bool start)
+bool spresense_startStopAudio(bool start)
 {
+    bool cmdOk = true;
+
     if(start == true) {
-        spresense_setupAudio();
+        cmdOk = spresense_setupAudio() ? false : true;
         theAudio->startRecorder();
     }
     else {
@@ -209,6 +213,8 @@ void spresense_startStopAudio(bool start)
         theAudio->setReadyMode();
         theAudio->end();
     }
+
+    return cmdOk;
 }
 
 /**
@@ -270,7 +276,6 @@ extern "C" bool spresense_openFile(const char *name, bool write)
         success = true;
     }
     else {
-        ei_printf("File cannot open %s is the SD card inserted?\r\n", name);
         success = false;
     }
 
@@ -398,28 +403,6 @@ static void init_acc(void)
 
     if (rc != 0) {
         ei_printf("Accelerometer (KX126) missing or not working correctly\r\n");
-    }
-
-    /** @todo Remove this test code */
-    // float acc[3];
-    // rc = kx126.get_val(acc);
-    // if (rc == 0) {
-    //     ei_printf("Acc: %f %f %f\r\n", acc[0], acc[1], acc[2]);
-    // }
-}
-
-/**
- * @brief Audio attention callback
- *
- * When audio internal error occurc, this function will be called back.
- */
-static void audio_attention_cb(const ErrorAttentionParam *atprm)
-{
-    ei_printf("Attention!");
-
-    if (atprm->error_code >= AS_ATTENTION_CODE_WARNING)
-    {
-        spresense_startStopAudio(false);
     }
 }
 

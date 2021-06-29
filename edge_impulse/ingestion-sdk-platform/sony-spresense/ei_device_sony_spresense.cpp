@@ -443,7 +443,7 @@ void ei_serial_setup(void)
  */
 void ei_printf(const char *format, ...)
 {
-    char buffer[128];
+    char buffer[256];
     int length;
     va_list myargs;
     va_start(myargs, format);

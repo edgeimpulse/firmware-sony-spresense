@@ -35,7 +35,7 @@
 #include "arm_math.h"
 
 /* Extern sony lib functions */
-extern void spresense_startStopAudio(bool start);
+extern bool spresense_startStopAudio(bool start);
 extern bool spresense_getAudio(char *audio_buffer, unsigned int* size);
 
 /* Audio sampling config */
@@ -277,24 +277,7 @@ static bool create_header(void)
  */
 void ei_microphone_init(void)
 {
-// #define PGA_R       26
-// #define PGA_L       21
-// #define GAIN_34_5dB 0x1F
 
-//     uint32_t *pdm0_core_conf = ((uint32_t *)0x50050204);
-//     uint32_t *pdm1_core_conf = ((uint32_t *)0x50050304);
-
-//     *(pdm0_core_conf) |= ((GAIN_34_5dB << PGA_R) | (GAIN_34_5dB << PGA_L));
-//     *(pdm1_core_conf) |= ((GAIN_34_5dB << PGA_R) | (GAIN_34_5dB << PGA_L));
-
-//     frameEv = xQueueCreate(2, sizeof(struct frameEvarg));
-
-//     sPdmcfg.pdmNum = 1;
-//     sPdmcfg.sRate = AUDIO_SAMPLES_PER_MS;
-//     sPdmcfg.cMode = 1;
-//     sPdmcfg.rFLen = AUDIO_DSP_SAMPLE_LENGTH_MS;
-
-//     ecm3532_pdm_init(&sPdmcfg, FrameCb, NULL);
 }
 
 bool ei_microphone_record(uint32_t sample_length_ms, uint32_t start_delay_ms, bool print_start_messages)
@@ -307,7 +290,10 @@ bool ei_microphone_record(uint32_t sample_length_ms, uint32_t start_delay_ms, bo
             start_delay_ms < 2000 ? 2000 : start_delay_ms);
     }
 
-    spresense_startStopAudio(true);
+    if(!spresense_startStopAudio(true)) {
+        ei_printf("\r\nERR: Missing DSP binary. Follow steps here https://developer.sony.com/develop/spresense/docs/arduino_tutorials_en.html#_install_dsp_files\r\n");
+        return false;
+    }
 
     if (start_delay_ms < 2000) {
         EiDevice.delay_ms(2000 - start_delay_ms);
