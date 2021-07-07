@@ -1,8 +1,6 @@
 # Directories
 build/
 .vscode/
-edge-impulse-sdk/
-edge_impulse/edge-impulse-sdk/
 
 # Prerequisites
 *.d
