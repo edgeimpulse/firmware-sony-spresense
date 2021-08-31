@@ -47,6 +47,11 @@ public:
         uint16_t hsize,
         uint16_t vsize) = 0; //pure virtual.  You must provide an implementation
 
+    // The following should return the minimum resolution of the camera
+    // The image SDK will automatically crop and interpolate lower than this when needed
+    virtual uint16_t get_min_width() = 0;
+    virtual uint16_t get_min_height() = 0;
+
     // the following are optional
 
     virtual bool init()

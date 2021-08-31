@@ -214,20 +214,18 @@ bool EiDeviceSonySpresense::get_snapshot_list(
     size_t *snapshot_list_size,
     const char **color_depth)
 {
-    snapshot_resolutions[0].width = 480;
-    snapshot_resolutions[0].height = 360;
-    snapshot_resolutions[1].width = 320;
-    snapshot_resolutions[1].height = 240;
-    snapshot_resolutions[2].width = 160;
-    snapshot_resolutions[2].height = 160; 
+    snapshot_resolutions[0].width = 320;
+    snapshot_resolutions[0].height = 240;
+    snapshot_resolutions[1].width = 160;
+    snapshot_resolutions[1].height = 160;
+    snapshot_resolutions[2].width = 96;
+    snapshot_resolutions[2].height = 96;
     snapshot_resolutions[3].width = 96;
-    snapshot_resolutions[3].height = 96; 
-    snapshot_resolutions[4].width = 96;
-    snapshot_resolutions[4].height = 64; 
+    snapshot_resolutions[3].height = 64;
 
 #if defined(EI_CLASSIFIER_SENSOR) && EI_CLASSIFIER_SENSOR == EI_CLASSIFIER_SENSOR_CAMERA
-    snapshot_resolutions[5].width = EI_CLASSIFIER_INPUT_WIDTH;
-    snapshot_resolutions[5].height = EI_CLASSIFIER_INPUT_HEIGHT;
+    snapshot_resolutions[4].width = EI_CLASSIFIER_INPUT_WIDTH;
+    snapshot_resolutions[4].height = EI_CLASSIFIER_INPUT_HEIGHT;
 #endif
 
     *snapshot_list = snapshot_resolutions;
@@ -238,41 +236,12 @@ bool EiDeviceSonySpresense::get_snapshot_list(
 }
 
 /**
- * @brief      Create resolution list for resizing
- * @param      resize_list       Place pointer to resolution list
- * @param      resize_list_size  Write number of resolutions here
- *
- * @return     False if all went ok
- */
-bool EiDeviceSonySpresense::get_resize_list(
-    const ei_device_resize_resolutions_t **resize_list,
-    size_t *resize_list_size)
-{
-    resize_resolutions[0].width = 128;
-    resize_resolutions[0].height = 96;
-
-    resize_resolutions[1].width = 160;
-    resize_resolutions[1].height = 120;
-
-    resize_resolutions[2].width = 200;
-    resize_resolutions[2].height = 150;
-
-    resize_resolutions[3].width = 256;
-    resize_resolutions[3].height = 192;
-
-    *resize_list = resize_resolutions;
-    *resize_list_size = EI_DEVICE_N_RESIZE_RESOLUTIONS;
-
-    return false;
-}
-
-/**
  * @brief      Device specific delay ms implementation
  *
  * @param[in]  milliseconds  The milliseconds
  */
 void EiDeviceSonySpresense::delay_ms(uint32_t milliseconds)
-{ 
+{
     ei_sleep(milliseconds);
 }
 

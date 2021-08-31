@@ -22,10 +22,10 @@
 
 #include <vector>
 
-#include "edge-impulse-sdk/dsp/EiProfiler.h"
 #include "firmware-sdk/ei_camera_interface.h"
 #include "firmware-sdk/ei_device_interface.h"
 #include "firmware-sdk/ei_image_lib.h"
+#include "edge-impulse-sdk/dsp/image/image.hpp"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -149,6 +149,8 @@ static bool release_camimage(int fd, struct v4l2_buffer *v4l2_buf)
 
 class EiCameraSony : public EiCamera {
 public:
+    uint16_t get_min_width() override { return 96; }
+    uint16_t get_min_height() override { return 64; }
     // see README, need to close and re open for certain operations
     bool init() override
     {
@@ -165,7 +167,7 @@ public:
             ei_printf("ERROR: Failed to open video.errno = %d\n", errno);
             v_fd = NULL;
             return false;
-        } 
+        }
         return true;
     }
 
@@ -197,16 +199,19 @@ public:
             return false;
         }
 
+        using namespace ei::image::processing;
+
         // In place conversion!
-        YUV422toRGB888(image, image, yuv_buf_size, BIG_ENDIAN_ORDER);
+        yuv422_to_rgb888(image, image, yuv_buf_size, BIG_ENDIAN_ORDER);
+
         return true;
     }
 
     // Note, image must be aligned on a 32 BYTE boundary!!
     bool captureYUV422(uint8_t *image, uint32_t image_size_B, uint16_t hsize, uint16_t vsize)
     {
-        if(!v_fd) {
-            ei_printf("ERR: Friends don't let friends dereference NULL pointers! Init camera before capturing\n");
+        if (!v_fd) {
+            ei_printf("ERR: Init camera before capturing\n");
             return false;
         }
 
@@ -248,7 +253,6 @@ public:
     }
     // nuttx camera handle
     int v_fd = NULL;
-
 };
 
 EiCamera *EiCamera::get_camera()

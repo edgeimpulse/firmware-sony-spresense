@@ -29,11 +29,6 @@ typedef struct {
 } ei_device_snapshot_resolutions_t;
 
 typedef struct {
-    size_t width;
-    size_t height;
-} ei_device_resize_resolutions_t;
-
-typedef struct {
     char str[32];
     int val;
 } ei_device_data_output_baudrate_t;
@@ -163,8 +158,8 @@ public:
         return true;
     }
 
-    virtual void set_default_data_output_baudrate();
-    virtual void set_max_data_output_baudrate();
+    virtual void set_default_data_output_baudrate(){};
+    virtual void set_max_data_output_baudrate(){};
 
     static EiDeviceInfo *get_device();
 };

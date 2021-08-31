@@ -35,11 +35,11 @@
 #include <memory>
 
 #include "edge-impulse-sdk/dsp/ei_utils.h"
+#include "edge-impulse-sdk/dsp/image/image.hpp"
 #include "edge-impulse-sdk/porting/ei_classifier_porting.h"
 #include "firmware-sdk/at_base64_lib.h"
 #include "firmware-sdk/ei_device_interface.h"
 #include "firmware-sdk/ei_image_lib.h"
-#include "edge-impulse-sdk/dsp/EiProfiler.h"
 
 // *********************************** AT cmd functions ***************
 
@@ -66,8 +66,28 @@ static void change_to_normal_baud()
 
 static bool ei_camera_take_snapshot_encode_and_output_no_init(size_t width, size_t height)
 {
+    using namespace ei::image::processing;
+
+    bool needs_a_resize = false;
+    uint16_t final_width = width;
+    uint16_t final_height = height;
+
+    auto camera = EiCamera::get_camera();
+    // check for unsupported dims. clamp to 64
+    uint16_t min_width = camera->get_min_width();
+    uint16_t min_height = camera->get_min_height();
+    if (width < min_width) {
+        needs_a_resize = true;
+        width = min_width;
+    }
+
+    if (height < min_height) {
+        needs_a_resize = true;
+        height = min_height;
+    }
+
     // rgb888 packed, 3B color depth
-    uint32_t size = width * height * 3;
+    uint32_t size = width * height * RGB888_B_SIZE;
 
 #if EI_PORTING_SONY_SPRESENSE
     // 32 BYTE aligned (for Sony, maybe others too?  Monster vector moves in our future?)
@@ -94,14 +114,29 @@ static bool ei_camera_take_snapshot_encode_and_output_no_init(size_t width, size
         counter += 100;
     }
 #else
-    auto camera = EiCamera::get_camera();
     bool isOK = camera->ei_camera_capture_rgb888_packed_big_endian(image, size, width, height);
     if (!isOK) {
         return false;
     }
+
+    if (needs_a_resize) {
+        // interpolate in place
+        ei::image::processing::crop_and_interpolate_rgb888(
+            image,
+            width,
+            height,
+            image,
+            final_width,
+            final_height);
+    }
+
 #endif
 
-    base64_encode(reinterpret_cast<char *>(image), size, ei_putc);
+    // recalculate size b/c now we want to send just the interpolated bytes
+    base64_encode(
+        reinterpret_cast<char *>(image),
+        final_height * final_width * RGB888_B_SIZE,
+        ei_putc);
 
     return true;
 }
@@ -116,14 +151,14 @@ ei_camera_take_snapshot_output_on_serial(size_t width, size_t height, bool use_m
         return false;
     }
 
-    if( use_max_baudrate ) {
+    if (use_max_baudrate) {
         respond_and_change_to_max_baud();
     }
 
     bool isOK = ei_camera_take_snapshot_encode_and_output_no_init(width, height);
     camera->deinit();
 
-    if( use_max_baudrate ) {
+    if (use_max_baudrate) {
         change_to_normal_baud();
     }
     else {
@@ -144,71 +179,19 @@ extern bool ei_camera_start_snapshot_stream(size_t width, size_t height, bool us
         return false;
     }
 
-    if( use_max_baudrate ) {
+    if (use_max_baudrate) {
         respond_and_change_to_max_baud();
     }
 
     while (!ei_user_invoke_stop_lib()) {
-        isOK &=
-            ei_camera_take_snapshot_encode_and_output_no_init(width, height);
+        isOK &= ei_camera_take_snapshot_encode_and_output_no_init(width, height);
         ei_printf("\r\n");
     }
     camera->deinit();
 
-    if( use_max_baudrate ) {
+    if (use_max_baudrate) {
         change_to_normal_baud();
     }
 
     return isOK;
-}
-
-// ------------------------------------- Util functions --------------------------------
-
-// Clamp out of range values
-#define CLAMP(t) (((t) > 255) ? 255 : (((t) < 0) ? 0 : (t)))
-
-// Color space conversion for RGB
-#define GET_R_FROM_YUV(y, u, v) ((298 * y + 409 * v + 128) >> 8)
-#define GET_G_FROM_YUV(y, u, v) ((298 * y - 100 * u - 208 * v + 128) >> 8)
-#define GET_B_FROM_YUV(y, u, v) ((298 * y + 516 * u + 128) >> 8)
-
-extern void YUV422toRGB888(
-    unsigned char *rgb_out,
-    unsigned const char *yuv_in,
-    unsigned int in_size_B,
-    YUV_OPTIONS opts)
-{
-    int in_size_pixels = in_size_B / 4;
-    yuv_in += in_size_B - 1;
-
-    int rgb_end = TEST_BIT_MASK(opts, PAD_4B) ? 2 * in_size_B : (6 * in_size_B) / 4;
-    rgb_out += rgb_end - 1;
-
-    // Going backwards probably looks strange, but
-    // This allows us to do the algorithm in place!
-    // User needs to put the YUV image into a larger buffer than necessary
-    // But going backwards means we don't overwrite the YUV bytes
-    //  until we don't need them anymore
-    for (unsigned int i = 0; i < in_size_pixels; ++i) {
-        int y2 = *yuv_in-- - 16;
-        int v = *yuv_in-- - 128;
-        int y0 = *yuv_in-- - 16;
-        int u0 = *yuv_in-- - 128;
-
-        if (TEST_BIT_MASK(opts, BIG_ENDIAN_ORDER)) {
-            *rgb_out-- = CLAMP(GET_B_FROM_YUV(y2, u0, v));
-            *rgb_out-- = CLAMP(GET_G_FROM_YUV(y2, u0, v));
-            *rgb_out-- = CLAMP(GET_R_FROM_YUV(y2, u0, v));
-            if (TEST_BIT_MASK(opts, PAD_4B)) {
-                *rgb_out-- = 0;
-            }
-
-            *rgb_out-- = CLAMP(GET_B_FROM_YUV(y0, u0, v));
-            *rgb_out-- = CLAMP(GET_G_FROM_YUV(y0, u0, v));
-            *rgb_out-- = CLAMP(GET_R_FROM_YUV(y0, u0, v));
-            if (TEST_BIT_MASK(opts, PAD_4B)) {
-                *rgb_out-- = 0;
-            }
-        } // else TODO
-    }
 }

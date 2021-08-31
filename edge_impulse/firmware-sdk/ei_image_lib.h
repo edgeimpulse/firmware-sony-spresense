@@ -53,13 +53,6 @@ bool ei_camera_take_snapshot_output_on_serial(size_t width, size_t height, bool 
 bool ei_camera_start_snapshot_stream(size_t width, size_t height, bool use_max_baudrate);
 
 
-// ********* Utilities for drivers to use to:
 
-enum YUV_OPTIONS {
-    BIG_ENDIAN_ORDER = 1, //RGB reading from low to high memory.  Otherwise, uses native encoding
-    PAD_4B = 2, // pad 0x00 on the high B. ie 0x00RRGGBB
-};
-
-void YUV422toRGB888(unsigned char *rgb_out, unsigned const char *yuv_in, unsigned int in_size, YUV_OPTIONS opts);
 
 #endif  //!__EI_IMAGE_LIB__H__

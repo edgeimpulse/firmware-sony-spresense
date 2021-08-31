@@ -35,7 +35,7 @@
 /** Number of sensors used */
 #define EI_DEVICE_N_SENSORS 2
 
-#define EI_RESOLUTIONS_BASE 5
+#define EI_RESOLUTIONS_BASE 4
 #if defined(EI_CLASSIFIER_SENSOR) && EI_CLASSIFIER_SENSOR == EI_CLASSIFIER_SENSOR_CAMERA
 #define EI_DEVICE_N_RESOLUTIONS     EI_RESOLUTIONS_BASE+1
 #else
@@ -70,14 +70,13 @@ typedef bool (*c_callback_read_sample_buffer)(
     void (*data_fn)(uint8_t *, size_t));
 
 /**
- * @brief      Class description and implementation of device specific 
+ * @brief      Class description and implementation of device specific
  * 			   characteristics
  */
 class EiDeviceSonySpresense : public EiDeviceInfo {
 private:
     ei_device_sensor_t sensors[EI_DEVICE_N_SENSORS];
     ei_device_snapshot_resolutions_t snapshot_resolutions[EI_DEVICE_N_RESOLUTIONS];
-    ei_device_resize_resolutions_t resize_resolutions[EI_DEVICE_N_RESIZE_RESOLUTIONS];
 public:
     EiDeviceSonySpresense(void);
 
@@ -91,13 +90,12 @@ public:
     bool get_sensor_list(const ei_device_sensor_t **sensor_list, size_t *sensor_list_size);
     bool get_snapshot_list(const ei_device_snapshot_resolutions_t **resolution_list, size_t *resolution_list_size,
                         const char **color_depth);
-    bool get_resize_list(const ei_device_resize_resolutions_t **resize_list, size_t *resize_list_size);
     void delay_ms(uint32_t milliseconds);
     void setup_led_control(void);
     void set_state(tEiState state);
 	int get_data_output_baudrate(ei_device_data_output_baudrate_t *baudrate);
 	void set_default_data_output_baudrate() override;
-	void set_max_data_output_baudrate() override;    
+	void set_max_data_output_baudrate() override;
 
     c_callback get_id_function(void);
 	c_callback_set_id set_id_function(void);

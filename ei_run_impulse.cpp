@@ -53,7 +53,7 @@ static bool acc_data_callback(const void *sample_buf, uint32_t byteLength)
     for(uint32_t i = 0; i < (byteLength / sizeof(float)); i++) {
         acc_buf[acc_sample_count + i] = buffer[i];
     }
-    
+
     return true;
 }
 
@@ -97,7 +97,7 @@ void run_nn(bool debug) {
         signal_t signal;
         int err = numpy::signal_from_buffer(acc_buf, EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE, &signal);
         if (err != 0) {
-            ei_printf("ERR: signal_from_buffer failed (%d)\n", err); 
+            ei_printf("ERR: signal_from_buffer failed (%d)\n", err);
         }
 
         // run the impulse: DSP, neural network and the Anomaly algorithm
@@ -152,7 +152,7 @@ void run_nn(bool debug) {
     ei_printf("Starting inferencing, press 'b' to break\n");
 
     while (stop_inferencing == false) {
-        
+
         ei_printf("Recording...\n");
 
         ei_microphone_inference_reset_buffers();
@@ -290,7 +290,7 @@ void run_nn(bool debug) {
         std::unique_ptr<uint8_t, decltype(free)*>{
             reinterpret_cast<uint8_t*>(memalign(32, IMAGE_SIZE)),
             free };
-    
+
     if( !image_p ) {
         ei_printf("run_nn out of memory\n");
         return;

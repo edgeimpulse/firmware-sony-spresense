@@ -28,23 +28,23 @@
 
 const size_t ei_dsp_blocks_size = 1;
 ei_model_dsp_t ei_dsp_blocks[ei_dsp_blocks_size] = {
-    { // DSP block 3
+    { // DSP block 506
         33,
         &extract_spectral_analysis_features,
-        (void*)&ei_dsp_config_3,
-        ei_dsp_config_3_axes,
-        ei_dsp_config_3_axes_size
+        (void*)&ei_dsp_config_506,
+        ei_dsp_config_506_axes,
+        ei_dsp_config_506_axes_size
     }
 };
 
 const size_t ei_dsp_blocks_i16_size = 1;
 ei_model_dsp_i16_t ei_dsp_blocks_i16[ei_dsp_blocks_i16_size] = {
-    { // DSP block 3
+    { // DSP block 506
         33,
         &extract_spectral_analysis_features,
-        (void*)&ei_dsp_config_3,
-        ei_dsp_config_3_axes,
-        ei_dsp_config_3_axes_size
+        (void*)&ei_dsp_config_506,
+        ei_dsp_config_506_axes,
+        ei_dsp_config_506_axes_size
     }
 };
 
