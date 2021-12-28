@@ -317,7 +317,12 @@ void run_nn(bool debug) {
     EiDevice.set_state(eiStateIdle);
 }
 
-#endif
+#else
+
+void run_nn(bool debug) {}
+#error "EI_CLASSIFIER_SENSOR not configured, cannot configure `run_nn`"
+
+#endif // EI_CLASSIFIER_SENSOR
 
 void run_nn_normal(void) {
     run_nn(false);

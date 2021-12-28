@@ -248,33 +248,33 @@ CXXFLAGS += $(APPFLAGS)
 all: $(BUILD)/firmware.spk
 
 $(BUILD)/%.o: %.c
-	@$(CC) $(CXXFLAGS) -c -o $@ $<
+	@"$(CC)" $(CXXFLAGS) -c -o $@ $<
 	@echo $<
 
 $(BUILD)/spr/%.o: %.cpp
-	@$(CXX) $(CXXFLAGS) $(INC_SPR) -c -o $@ $<
+	@"$(CXX)" $(CXXFLAGS) $(INC_SPR) -c -o $@ $<
 	@echo $<
 
 $(BUILD)/app/%.o: %.cpp
-	@$(CXX) $(CXXFLAGS) 	$(INC_APP) -c -o $@ $<
+	@"$(CXX)" $(CXXFLAGS) 	$(INC_APP) -c -o $@ $<
 	@echo $<
 
 $(BUILD)/app/%.o: %.cc
-	@$(CXX) $(CXXFLAGS) 	$(INC_APP) -c -o $@ $<
+	@"$(CXX)" $(CXXFLAGS) 	$(INC_APP) -c -o $@ $<
 	@echo $<
 
 $(BUILD)/app/%.o: %.c
-	@$(CC) $(CFLAGS) 	$(INC_APP) -c -o $@ $<
+	@"$(CC)" $(CFLAGS) 	$(INC_APP) -c -o $@ $<
 	@echo $<
 
 $(BUILD)/libapp.a: $(SPRESENSE_SDK) $(OBJ)
-	$(AR) rcs $(BUILD)/libapp.a $(OBJ)
+	"$(AR)" rcs $(BUILD)/libapp.a $(addprefix ", $(addsuffix ",$(OBJ)))
 
 $(BUILD)/firmware.elf: $(BUILD)/libapp.a
-	$(LD) $(LDFLAGS)
+	"$(LD)" $(LDFLAGS)
 
 $(MKSPK):
-	$(MAKE) -C mkspk
+	"$(MAKE)" -C mkspk
 
 $(BUILD):
 	mkdir -p $(BUILD)

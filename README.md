@@ -21,7 +21,8 @@ Edge Impulse enables developers to create the next generation of intelligent dev
 
 * [Edge Impulse CLI](https://docs.edgeimpulse.com/docs/cli-installation).  
 * [GNU Make](https://www.gnu.org/software/make/).  
-* [GNU ARM Embedded Toolchain 8-2018-q4-major](https://developer.arm.com/tools-and-software/open-source-software/developer-tools/gnu-toolchain/gnu-rm/downloads) - make sure `arm-none-eabi-gcc` is in your PATH. 
+* [GNU ARM Embedded Toolchain 9-2019-q4-major](https://developer.arm.com/tools-and-software/open-source-software/developer-tools/gnu-toolchain/gnu-rm/downloads) - make sure `arm-none-eabi-gcc` is in your PATH.
+* [Python 3](https://www.python.org/download/releases/3.0/).
 
 ## Building and flashing the application
 
@@ -78,12 +79,12 @@ The nuttx stdint.h defines int32 as unsigned long, whereas the stdlib.h that shi
 - The video driver doesn't like to change resolutions after being opened.  This prevents lazy initialization and using the same handle for the entire life of program.
  - Thus, we open and close on entering and exiting snapshot stream, and on each snapshot for ingestion or inference
 
-## Troubleshooting
+## Tips
 
-**undefined reference to `_impure_ptr'**
+### Override the ARM GNU Toolchain
 
-Make sure you build with [GNU ARM Embedded Toolchain 8-2018-q4-major](https://developer.arm.com/tools-and-software/open-source-software/developer-tools/gnu-toolchain/gnu-rm/downloads). If you have multiple toolchains installed, you can override the compiler via:
+If you have multiple toolchains installed, you can override the compiler via:
 
 ```
-$ CC=~/toolchains/gcc-arm-none-eabi-8-2018-q4-major/bin/arm-none-eabi-gcc CXX=~/toolchains/gcc-arm-none-eabi-8-2018-q4-major/bin/arm-none-eabi-g++ make -j
+$ CROSS_COMPILE=~/toolchains/gcc-arm-none-eabi-9-2019-q4-major/bin/arm-none-eabi- make -j
 ```
