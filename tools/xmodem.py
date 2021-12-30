@@ -529,12 +529,12 @@ class XMODEM(object):
                 char = self.getc(1, timeout)
                 if char == ACK:
                     success_count += 1
-                    if isinstance(callback, collections.Callable):
+                    if isinstance(callback, collections.abc.Callable):
                         callback(total_packets, success_count, error_count)
                     break
                 if char == NAK:
                     error_count += 1
-                    if isinstance(callback, collections.Callable):
+                    if isinstance(callback, collections.abc.Callable):
                         callback(total_packets, success_count, error_count)
                     if error_count >= retry:
                         # excessive amounts of retransmissions requested,
@@ -548,7 +548,7 @@ class XMODEM(object):
                 else:
                     log.error("Not ACK, Not NAK")
                     error_count += 1
-                    if isinstance(callback, collections.Callable):
+                    if isinstance(callback, collections.abc.Callable):
                         callback(total_packets, success_count, error_count)
                     if error_count >= retry:
                         # excessive amounts of retransmissions requested,
