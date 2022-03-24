@@ -62,7 +62,7 @@ static bool acc_data_callback(const void *sample_buf, uint32_t byteLength)
  *
  * @param[in]  debug  The debug
  */
-void run_nn(bool debug) {
+void run_nn(bool debug, int delay_ms, bool use_max_baudrate) {
 
     bool stop_inferencing = false;
 
@@ -117,10 +117,12 @@ void run_nn(bool debug) {
 #if EI_CLASSIFIER_HAS_ANOMALY == 1
         ei_printf("    anomaly score: %f\r\n", result.anomaly);
 #endif
-        ei_printf("Starting inferencing in 2 seconds...\n");
+        if (delay_ms != 0) {
+            ei_printf("Starting inferencing in %d seconds...\n", delay_ms / 1000);
+        }
 
         // instead of wait_ms, we'll wait on the signal, this allows threads to cancel us...
-        uint64_t end_ms = ei_read_timer_ms() + 2000;
+        uint64_t end_ms = ei_read_timer_ms() + delay_ms;
         while(end_ms > ei_read_timer_ms()){
             if(ei_user_invoke_stop_lib()) {
                 ei_printf("Inferencing stopped by user\r\n");
@@ -133,7 +135,7 @@ void run_nn(bool debug) {
 }
 
 #elif defined(EI_CLASSIFIER_SENSOR) && EI_CLASSIFIER_SENSOR == EI_CLASSIFIER_SENSOR_MICROPHONE
-void run_nn(bool debug) {
+void run_nn(bool debug, int delay_ms, bool use_max_baudrate) {
     if (EI_CLASSIFIER_FREQUENCY != 16000) {
         ei_printf("ERR: Frequency is %d but can only sample at 16000Hz\n", (int)EI_CLASSIFIER_FREQUENCY);
         return;
@@ -190,10 +192,12 @@ void run_nn(bool debug) {
         ei_printf("    anomaly score: %f\r\n", result.anomaly);
 #endif
 
-        ei_printf("Starting inferencing in 2 seconds...\n");
+        if (delay_ms != 0) {
+            ei_printf("Starting inferencing in %d seconds...\n", delay_ms / 1000);
+        }
 
         // instead of wait_ms, we'll wait on the signal, this allows threads to cancel us...
-        uint64_t end_ms = ei_read_timer_ms() + 2000;
+        uint64_t end_ms = ei_read_timer_ms() + delay_ms;
         while(end_ms > ei_read_timer_ms()){
             if(ei_user_invoke_stop_lib()) {
                 ei_printf("Inferencing stopped by user\r\n");
@@ -283,7 +287,7 @@ void run_nn_continuous(bool debug)
 #include <memory>
 #include "malloc.h" //for memalign
 
-void run_nn(bool debug) {
+void run_nn(bool debug, int delay_ms, bool use_max_baudrate) {
 
     // size enough for packed RGB888
     const int IMAGE_SIZE = EI_CLASSIFIER_INPUT_WIDTH * EI_CLASSIFIER_INPUT_HEIGHT * 3;
@@ -313,28 +317,41 @@ void run_nn(bool debug) {
         EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE,
         EI_CLASSIFIER_LABEL_COUNT);
 
-    imageNN.run_nn(debug);
+    imageNN.run_nn(debug, delay_ms, use_max_baudrate);
     EiDevice.set_state(eiStateIdle);
 }
 
 #else
 
-void run_nn(bool debug) {}
+void run_nn(bool debug, int delay_ms, bool use_max_baudrate) {}
 #error "EI_CLASSIFIER_SENSOR not configured, cannot configure `run_nn`"
 
 #endif // EI_CLASSIFIER_SENSOR
 
 void run_nn_normal(void) {
-    run_nn(false);
+    run_nn(false, 2000, false);
 }
 
-void run_nn_debug(void) {
-    run_nn(true);
+void run_nn_debug(char *baudrate_s) {
+
+    bool use_max_baudrate = false;
+    if (baudrate_s[0] == 'y') {
+       use_max_baudrate = true;
+    }
+
+#if defined(EI_CLASSIFIER_SENSOR) && EI_CLASSIFIER_SENSOR == EI_CLASSIFIER_SENSOR_CAMERA
+    run_nn(true, 0, use_max_baudrate);
+#else
+    run_nn(true, 2000, use_max_baudrate);
+#endif
+
 }
 
 void run_nn_continuous_normal(void) {
 #if defined(EI_CLASSIFIER_SENSOR) && EI_CLASSIFIER_SENSOR == EI_CLASSIFIER_SENSOR_MICROPHONE
     run_nn_continuous(false);
+#elif defined(EI_CLASSIFIER_SENSOR) && EI_CLASSIFIER_SENSOR == EI_CLASSIFIER_SENSOR_CAMERA
+    run_nn(false, 0, false);
 #else
     ei_printf("Error no continuous classification available for current model\r\n");
 #endif

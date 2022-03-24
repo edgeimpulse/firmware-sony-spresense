@@ -6,15 +6,17 @@
 #include <cxd56_uart.h>
 #include <hardware/cxd5602_memorymap.h>
 
-#include "ei_device_sony_spresense.h"
-
 #include "Audio.h"
 #include "Wire.h"
 #include "KX126.h"
 #include "File.h"
 
+#include "ei_device_sony_spresense_config.h"
+#include "edge-impulse-sdk/porting/ei_classifier_porting.h"
+
 /* Extern reference -------------------------------------------------------- */
 extern int ei_main();
+extern void set_id(char* id);
 
 /* Forward declarations ---------------------------------------------------- */
 static void disable_uart_irq(void);
@@ -388,7 +390,7 @@ static void handle_sony_id(void)
 
     sprintf(id_string, "%X:%X:%X:%X:%X", raw_id[0], raw_id[1], raw_id[2], raw_id[3], raw_id[4]);
 
-    EiDevice.set_id(id_string);
+    set_id(id_string);
 }
 
 /**

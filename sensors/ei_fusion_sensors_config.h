@@ -1,4 +1,4 @@
-/* Edge Impulse inferencing library
+/* Edge Impulse ingestion SDK
  * Copyright (c) 2021 EdgeImpulse Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -20,19 +20,16 @@
  * SOFTWARE.
  */
 
-#include "../ei_classifier_porting.h"
-#if EI_PORTING_ECM3532 == 1
+#ifndef EI_FUSION_SENSORS_CONFIG_H
+#define EI_FUSION_SENSORS_CONFIG_H
 
-#include "edge-impulse-sdk/tensorflow/lite/micro/debug_log.h"
-#include <stdio.h>
-#include <stdarg.h>
+#define NUM_FUSION_SENSORS       1  // number of fusable sensor modules
+#define NUM_MAX_FUSIONS          1  // max number of sensor module combinations
+#define FUSION_FREQUENCY         12.5f // sampling frequency for fusion samples
+#define NUM_MAX_FUSION_AXIS      20 // max number of axis to sample
+#define SIZEOF_SENSOR_NAME       20 // char alloc for sensor module name
 
-// Redirect TFLite DebugLog to ei_printf
-#if defined(__cplusplus) && EI_C_LINKAGE == 1
-extern "C"
-#endif // defined(__cplusplus) && EI_C_LINKAGE == 1
-void DebugLog(const char* s) {
-    ei_printf("%s", s);
-}
+/** Format used for fusion */
+typedef float fusion_sample_format_t;
 
-#endif // EI_PORTING_ECM3532 == 1
+#endif // EI_FUSION_SENSORS_CONFIG_H

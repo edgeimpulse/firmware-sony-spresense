@@ -71,6 +71,8 @@ INC_APP += \
 	-I edge_impulse/edge-impulse-sdk/tensorflow/lite/scheme \
 	-I edge_impulse/edge-impulse-sdk/tensorflow/lite/c \
 	-I edge_impulse/edge-impulse-sdk/tensorflow/lite/core/api \
+	-I edge_impulse/firmware-sdk \
+	-I edge_impulse/firmware-sdk/jpeg \
 	-I edge_impulse/model-parameters \
 	-I edge_impulse/tflite-model \
 	-I sensors \
@@ -163,6 +165,7 @@ SRC_APP_CXX += \
 	ei_run_impulse.cpp \
 	$(notdir $(wildcard edge_impulse/edge-impulse-sdk/porting/sony/*.cpp)) \
 	$(notdir $(wildcard edge_impulse/firmware-sdk/*.cpp)) \
+	$(notdir $(wildcard edge_impulse/firmware-sdk/jpeg/*.cpp)) \
 	$(notdir $(wildcard edge_impulse/edge-impulse-sdk/dsp/dct/*.cpp)) \
 	$(notdir $(wildcard edge_impulse/edge-impulse-sdk/dsp/kissfft/*.cpp)) \
 	$(notdir $(wildcard edge_impulse/edge-impulse-sdk/dsp/image/*.cpp ))\
@@ -201,6 +204,7 @@ SRC_APP_C += \
 VPATH += stdlib \
 	edge_impulse/edge-impulse-sdk/porting/sony \
 	edge_impulse/firmware-sdk \
+	edge_impulse/firmware-sdk/jpeg \
 	edge_impulse/ingestion-sdk-platform/sony-spresense \
 	edge_impulse/ingestion-sdk-c \
 	edge_impulse/repl \

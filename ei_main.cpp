@@ -68,7 +68,7 @@ int ei_main() {
     ei_at_register_generic_cmds();
     ei_at_cmd_register("RUNIMPULSE", "Run the impulse", run_nn_normal);
     ei_at_cmd_register("RUNIMPULSECONT", "Run the impulse", run_nn_continuous_normal);
-    ei_at_cmd_register("RUNIMPULSEDEBUG", "Run the impulse with extra debug output", run_nn_debug);
+    ei_at_cmd_register("RUNIMPULSEDEBUG=", "Run the impulse with extra (base64) debug output (USEMAXRATE?(y/n))", run_nn_debug);
     ei_printf("Type AT+HELP to see a list of commands.\r\n> ");
 
     EiDevice.set_state(eiStateFinished);
@@ -76,4 +76,8 @@ int ei_main() {
     while (1) {
         ei_command_line_handle();
     }
+}
+
+extern void set_id(char* id) {
+     EiDevice.set_id(id);
 }

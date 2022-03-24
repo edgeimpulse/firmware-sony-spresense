@@ -20,7 +20,7 @@
 
 #include <Wire.h>
 #include "KX126.h"
-#include "ei_device_sony_spresense.h"
+#include "edge-impulse-sdk/porting/ei_classifier_porting.h"
 
 #define RESET_DELAY 2
 

@@ -72,7 +72,7 @@ static char ei_device_id[DEVICE_ID_MAX_SIZE];
 /** Device object, for this class only 1 object should exist */
 EiDeviceSonySpresense EiDevice;
 
-static tEiState ei_program_state = eiStateIdle;
+static EiState ei_program_state = eiStateIdle;
 
 
 /* Private function declarations ------------------------------------------- */
@@ -256,7 +256,7 @@ void EiDeviceSonySpresense::setup_led_control(void)
     //     HalTmrStart(AppTmr);
 }
 
-void EiDeviceSonySpresense::set_state(tEiState state)
+void EiDeviceSonySpresense::set_state(EiState state)
 {
     ei_program_state = state;
 

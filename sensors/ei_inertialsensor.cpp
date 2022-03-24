@@ -115,7 +115,7 @@ bool ei_inertial_setup_data_sampling(void)
     };
 
     EiDevice.set_state(eiStateErasingFlash);
-    ei_sampler_start_sampling(&payload, SIZEOF_N_AXIS_SAMPLED);
+    ei_sampler_start_sampling(&payload, &ei_inertial_sample_start, SIZEOF_N_AXIS_SAMPLED);
     EiDevice.set_state(eiStateIdle);
 
     return true;

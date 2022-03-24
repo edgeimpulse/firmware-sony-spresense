@@ -28,12 +28,19 @@
 #include "edge-impulse-sdk/porting/ei_classifier_porting.h"
 
 /* Function prototypes ----------------------------------------------------- */
+//TODO: remove as it is device specific and wil be superseded by AT Server
 void ei_command_line_handle(void);
+//TODO: redeclared in ei_device_lib.h
 bool ei_user_invoke_stop_lib(void);
+//TODO: do we need it in the FW SDK?
 void ei_serial_setup(void);
 
+//TODO: remove as it is device specific
 void ei_write_string(char *data, int length);
+
+//TODO: move to a one header with all method requied by FW SDK
 void ei_putc(char cChar);
+//TODO: move to a one header with all method requied by FW SDK
 char ei_getchar();
 
 

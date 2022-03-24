@@ -26,9 +26,8 @@
 /* Include ----------------------------------------------------------------- */
 #include "firmware-sdk/ei_device_info_lib.h"
 #include "firmware-sdk/ei_device_interface.h"
+#include "ei_device_sony_spresense_config.h"
 
-#define DEFAULT_BAUD 115200
-#define MAX_BAUD 921600
 
 #define CONSOLE_BASE    CXD56_UART1_BASE
 
@@ -44,21 +43,6 @@
 
 #define EI_DEVICE_N_RESIZE_RESOLUTIONS      4
 
-typedef enum
-{
-    eiStateIdle = 0,
-    eiStateErasingFlash,
-    eiStateSampling,
-    eiStateUploading,
-    eiStateFinished
-
-} tEiState;
-
-/** Led definition */
-typedef enum
-{
-    LED1 = 0, LED2, LED3, LED4, LEDALL
-} tEiLeds;
 
 /** C Callback types */
 typedef int (*c_callback)(uint8_t out_buffer[32], size_t *out_size);
@@ -92,7 +76,7 @@ public:
                         const char **color_depth);
     void delay_ms(uint32_t milliseconds);
     void setup_led_control(void);
-    void set_state(tEiState state);
+    void set_state(EiState state);
 	int get_data_output_baudrate(ei_device_data_output_baudrate_t *baudrate);
 	void set_default_data_output_baudrate() override;
 	void set_max_data_output_baudrate() override;
