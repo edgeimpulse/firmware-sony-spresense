@@ -1,5 +1,6 @@
 
 /* Include ----------------------------------------------------------------- */
+#include "edge-impulse-sdk/porting/ei_classifier_porting.h"
 #include "ei_sony_spresense_fs_commands.h"
 #include "ei_device_sony_spresense.h"
 

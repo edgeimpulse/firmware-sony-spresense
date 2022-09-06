@@ -26,7 +26,6 @@
 #include "firmware-sdk/ei_device_interface.h"
 #include "firmware-sdk/ei_image_lib.h"
 #include "edge-impulse-sdk/dsp/image/image.hpp"
-
 #include <errno.h>
 #include <fcntl.h>
 #include <nuttx/video/video.h>
@@ -38,7 +37,7 @@
 
 // image must be 32b word aligned
 static bool
-camera_prepare(int fd, uint8_t *image, uint32_t image_size_B, uint16_t hsize, uint16_t vsize)
+camera_prepare(int fd, uint8_t *image, uint32_t image_size_B, uint16_t width, uint16_t height)
 {
     int ret;
     struct v4l2_format fmt = { 0 };
@@ -62,8 +61,8 @@ camera_prepare(int fd, uint8_t *image, uint32_t image_size_B, uint16_t hsize, ui
     /* VIDIOC_S_FMT set format */
 
     fmt.type = TYPE;
-    fmt.fmt.pix.width = hsize;
-    fmt.fmt.pix.height = vsize;
+    fmt.fmt.pix.width = width;
+    fmt.fmt.pix.height = height;
     fmt.fmt.pix.field = V4L2_FIELD_ANY;
     fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_UYVY;
 
@@ -148,11 +147,20 @@ static bool release_camimage(int fd, struct v4l2_buffer *v4l2_buf)
 }
 
 class EiCameraSony : public EiCamera {
+private:
+    uint16_t output_width;
+    uint16_t output_height;
+    static ei_device_snapshot_resolutions_t resolutions[];
 public:
-    uint16_t get_min_width() override { return 96; }
-    uint16_t get_min_height() override { return 64; }
+    ei_device_snapshot_resolutions_t get_min_resolution(void)
+    {
+        return resolutions[0];
+    }
+
+    void get_resolutions(ei_device_snapshot_resolutions_t **res, uint8_t *res_num);
+
     // see README, need to close and re open for certain operations
-    bool init() override
+    bool init(uint16_t width, uint16_t height) override
     {
 
         //lazy init the handle
@@ -168,6 +176,10 @@ public:
             v_fd = NULL;
             return false;
         }
+
+        this->output_height = height;
+        this->output_width = width;
+        
         return true;
     }
 
@@ -179,20 +191,27 @@ public:
         return true;
     }
 
+    bool set_resolution(const ei_device_snapshot_resolutions_t res)
+    {
+        // Nothing to do...?
+        return true;
+    }
+
     bool ei_camera_capture_rgb888_packed_big_endian(
         uint8_t *image,
-        unsigned int image_size_B, // using raw types b/c of stdint.h int32 mismatch!
-        uint16_t hsize,
-        uint16_t vsize) override
+        unsigned int image_size) override // using raw types b/c of stdint.h int32 mismatch!
     {
+        uint16_t height = this->output_height;
+        uint16_t width = this->output_width;    
+
         // check buffer size.  RGB packed, 3B per pixel
-        if (image_size_B < hsize * vsize * 3) {
+        if (image_size < height * width * 3) {
             ei_printf("Buffer for image capture too small\n");
             return false;
         }
         // 2B per pixel in YUV land
-        uint32_t yuv_buf_size = hsize * vsize * 2;
-        bool isOK = captureYUV422(image, yuv_buf_size, hsize, vsize);
+        uint32_t yuv_buf_size = height * width * 2;
+        bool isOK = captureYUV422(image, yuv_buf_size, width, height);
 
         if (!isOK) {
             ei_printf("Could not capture image\n");
@@ -208,7 +227,7 @@ public:
     }
 
     // Note, image must be aligned on a 32 BYTE boundary!!
-    bool captureYUV422(uint8_t *image, uint32_t image_size_B, uint16_t hsize, uint16_t vsize)
+    bool captureYUV422(uint8_t *image, uint32_t image_size_B, uint16_t width, uint16_t height)
     {
         if (!v_fd) {
             ei_printf("ERR: Init camera before capturing\n");
@@ -219,7 +238,7 @@ public:
         struct v4l2_buffer v4l2_buf;
         bool isOK;
 
-        isOK = camera_prepare(v_fd, image, image_size_B, hsize, vsize);
+        isOK = camera_prepare(v_fd, image, image_size_B, width, height);
         if (!isOK) {
             return false;
         }
@@ -254,6 +273,23 @@ public:
     // nuttx camera handle
     int v_fd = NULL;
 };
+
+ei_device_snapshot_resolutions_t EiCameraSony::resolutions[] = {
+        { .width = 96, .height = 64 },
+        { .width = 96, .height = 96 },
+        { .width = 160, .height = 160 },
+        { .width = 320, .height = 240 },
+#if defined(EI_CLASSIFIER_SENSOR) && EI_CLASSIFIER_SENSOR == EI_CLASSIFIER_SENSOR_CAMERA
+        { .width = EI_CLASSIFIER_INPUT_WIDTH, .height = EI_CLASSIFIER_INPUT_HEIGHT },
+#endif
+    };
+
+void EiCameraSony::get_resolutions(ei_device_snapshot_resolutions_t **res, uint8_t *res_num)
+{
+    *res = &EiCameraSony::resolutions[0];
+    *res_num = sizeof(EiCameraSony::resolutions) / sizeof(ei_device_snapshot_resolutions_t);
+}
+
 
 EiCamera *EiCamera::get_camera()
 {

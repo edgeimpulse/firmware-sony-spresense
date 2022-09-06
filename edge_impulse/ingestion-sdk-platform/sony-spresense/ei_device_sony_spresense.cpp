@@ -48,12 +48,12 @@ typedef enum
 
 /** Data Output Baudrate */
 const ei_device_data_output_baudrate_t ei_dev_max_data_output_baudrate = {
-    xstr(MAX_BAUD),
+    ei_xstr(MAX_BAUD),
     MAX_BAUD,
 };
 
 const ei_device_data_output_baudrate_t ei_dev_default_data_output_baudrate = {
-    xstr(DEFAULT_BAUD),
+    ei_xstr(DEFAULT_BAUD),
     DEFAULT_BAUD,
 };
 
@@ -311,6 +311,11 @@ void EiDeviceSonySpresense::set_default_data_output_baudrate()
     set_default_data_output_baudrate_c();
 }
 
+void EiDeviceSonySpresense::init_device_id(void)
+{
+
+}
+
 /**
  * @brief      Get a C callback for the get_id method
  *
@@ -457,7 +462,10 @@ void ei_putc(char cChar)
 {
     spresense_putchar(cChar);
 }
-
+void ei_putchar(char cChar)
+{
+    spresense_putchar(cChar);
+}
 /* Private functions ------------------------------------------------------- */
 static void timer_callback(void *arg)
 {

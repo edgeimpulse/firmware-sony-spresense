@@ -1,7 +1,7 @@
 
 /* Include ----------------------------------------------------------------- */
 #include "repl.h"
-
+#include "edge-impulse-sdk/porting/ei_classifier_porting.h"
 #include "ei_device_sony_spresense.h"
 // #include "at_cmd_interface.h"
 

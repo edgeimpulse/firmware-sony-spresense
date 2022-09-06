@@ -80,6 +80,7 @@ public:
 	int get_data_output_baudrate(ei_device_data_output_baudrate_t *baudrate);
 	void set_default_data_output_baudrate() override;
 	void set_max_data_output_baudrate() override;
+    void init_device_id(void) override;
 
     c_callback get_id_function(void);
 	c_callback_set_id set_id_function(void);

@@ -16,4 +16,4 @@ build/
 *.map
 *.exp
 
-tools/__pycache__/xmodem.cpython-38.pyc
+tools/__pycache__/xmodem.cpython-*.pyc

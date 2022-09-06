@@ -110,6 +110,8 @@ CFLAGS += \
 
 CXXFLAGS += $(CFLAGS) \
 	-std=gnu++11 \
+	-nostartfiles \
+	-nodefaultlibs \
 	-fno-rtti \
 	-fno-use-cxa-atexit \
 	-fno-inline-functions
@@ -120,8 +122,6 @@ LIBSTDC = libstdc++.a
 
 LDFLAGS = \
 	--entry=__start \
-	-nostartfiles \
-	-nodefaultlibs \
 	-T$(SPRESENSE_SDK)/nuttx/scripts/ramconfig.ld \
 	--defsym __stack=_vectors+1179648 \
 	--gc-sections \

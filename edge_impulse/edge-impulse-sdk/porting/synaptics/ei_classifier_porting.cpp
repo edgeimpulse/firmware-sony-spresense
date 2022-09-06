@@ -57,7 +57,7 @@ uint64_t ei_read_timer_ms() {
 
 uint64_t ei_read_timer_us() {
 
-    return 0;
+    return get_time_ms() * 1000;
 }
 
 __attribute__((weak)) void ei_printf(const char *format, ...) {
