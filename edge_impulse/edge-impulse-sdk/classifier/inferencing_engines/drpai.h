@@ -1,5 +1,29 @@
-#ifndef DRPAI_H
-#define DRPAI_H
+/* Edge Impulse inferencing library
+ * Copyright (c) 2022 EdgeImpulse Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
+#ifndef _EI_CLASSIFIER_INFERENCING_ENGINE_DRPAI_H_
+#define _EI_CLASSIFIER_INFERENCING_ENGINE_DRPAI_H_
+
+#if (EI_CLASSIFIER_INFERENCING_ENGINE == EI_CLASSIFIER_DRPAI)
 
 /*****************************************
  * includes
@@ -21,17 +45,23 @@
 #include <vector>
 
 #include <linux/drpai.h>
-#include <model-parameters/model_metadata.h>
+
 #include <tflite-model/drpai_model.h>
+
+#include "edge-impulse-sdk/classifier/ei_run_dsp.h"
+#include "edge-impulse-sdk/porting/ei_classifier_porting.h"
+#include "edge-impulse-sdk/classifier/ei_fill_result_struct.h"
+#include "edge-impulse-sdk/classifier/ei_model_types.h"
+#include "edge-impulse-sdk/porting/ei_logging.h"
+
+#include "model-parameters/dsp_blocks.h"
+#include <model-parameters/model_metadata.h>
 
 /*****************************************
  * Macro
  ******************************************/
 /*Maximum DRP-AI Timeout threshold*/
 #define DRPAI_TIMEOUT (5)
-
-// Fixed DMA address for memory mapped input buffer region
-#define UDMABUF_ADDRESS (0xB9000000)
 
 /*Buffer size for writing data to memory via DRP-AI Driver.*/
 #define BUF_SIZE (1024)
@@ -79,32 +109,68 @@ typedef struct {
  * static vars
  ******************************************/
 static st_addr_t drpai_address;
+static uint64_t udmabuf_address = 0;
 
 static int drpai_fd = -1;
 
 drpai_data_t proc[DRPAI_INDEX_NUM];
 
-uint8_t drpai_init_mem() {
+void get_udmabuf_memory_start_addr()
+{   /* Obtain udmabuf memory area starting address */
+
+    int8_t fd = 0;
+    char addr[1024];
+    int32_t read_ret = 0;
+    errno = 0;
+
+    fd = open("/sys/class/u-dma-buf/udmabuf0/phys_addr", O_RDONLY);
+    if (0 > fd)
+    {
+        fprintf(stderr, "[ERROR] Failed to open udmabuf0/phys_addr : errno=%d\n", errno);
+    }
+
+    read_ret = read(fd, addr, 1024);
+    if (0 > read_ret)
+    {
+        fprintf(stderr, "[ERROR] Failed to read udmabuf0/phys_addr : errno=%d\n", errno);
+        close(fd);
+    }
+
+    sscanf(addr, "%lx", &udmabuf_address);
+    close(fd);
+
+    /* Filter the bit higher than 32 bit */
+    udmabuf_address &=0xFFFFFFFF;
+}
+
+uint8_t drpai_init_mem(uint32_t input_frame_size) {
   int32_t i = 0;
 
-  int test_fd = open("/dev/udmabuf0", O_RDWR);
-  if (test_fd < 0) {
+  int udmabuf_fd0 = open("/dev/udmabuf0", O_RDWR);
+  if (udmabuf_fd0 < 0) {
     return -1;
   }
 
   uint8_t *addr =
-      (uint8_t *)mmap(NULL, EI_CLASSIFIER_NN_INPUT_FRAME_SIZE,
-                      PROT_READ | PROT_WRITE, MAP_SHARED, test_fd, 0);
+      (uint8_t *)mmap(NULL, input_frame_size,
+                      PROT_READ | PROT_WRITE, MAP_SHARED, udmabuf_fd0, 0);
 
   /* Write once to allocate physical memory to u-dma-buf virtual space.
    * Note: Do not use memset() for this.
    *       Because it does not work as expected. */
-  for (i = 0; i < EI_CLASSIFIER_NN_INPUT_FRAME_SIZE; i++) {
+  for (i = 0; i < input_frame_size; i++) {
     addr[i] = 0;
   }
 
   drpai_input_buf = addr;
   drpai_output_buf = (float *)ei_malloc(10000 * sizeof(float));
+
+  get_udmabuf_memory_start_addr();
+  if (0 == udmabuf_address) {
+    return EI_IMPULSE_DRPAI_INIT_FAILED;
+  }
+
+  // ei_printf("INFO: udmabuf_addr: %p\n", udmabuf_address);
 
   return 0;
 }
@@ -245,7 +311,7 @@ static int load_drpai_data(int drpai_fd) {
   return 0;
 }
 
-EI_IMPULSE_ERROR drpai_init_classifier(bool debug) {
+EI_IMPULSE_ERROR drpai_init_classifier() {
   // retval for drpai status
   int ret_drpai;
 
@@ -273,7 +339,7 @@ EI_IMPULSE_ERROR drpai_init_classifier(bool debug) {
   }
 
   // statically store DRP object file addresses and sizes
-  proc[DRPAI_INDEX_INPUT].address = (uintptr_t)UDMABUF_ADDRESS;
+  proc[DRPAI_INDEX_INPUT].address = (uint32_t)udmabuf_address;
   proc[DRPAI_INDEX_INPUT].size = drpai_address.data_in_size;
   proc[DRPAI_INDEX_DRP_CFG].address = drpai_address.drp_config_addr;
   proc[DRPAI_INDEX_DRP_CFG].size = drpai_address.drp_config_size;
@@ -291,7 +357,7 @@ EI_IMPULSE_ERROR drpai_init_classifier(bool debug) {
   return EI_IMPULSE_OK;
 }
 
-EI_IMPULSE_ERROR drpai_run_classifier_image_quantized(bool debug) {
+EI_IMPULSE_ERROR drpai_run_classifier_image_quantized() {
 #if EI_CLASSIFIER_COMPILED == 1
 #error "DRP-AI is not compatible with EON Compiler"
 #endif
@@ -315,9 +381,7 @@ EI_IMPULSE_ERROR drpai_run_classifier_image_quantized(bool debug) {
   // Start DRP-AI driver
   int ioret = ioctl(drpai_fd, DRPAI_START, &proc[0]);
   if (0 != ioret) {
-    if (debug) {
-      ei_printf("ERR: Failed to Start DRPAI Inference: %d\n", errno);
-    }
+    EI_LOGE("Failed to Start DRPAI Inference: %d\n", errno);
     return EI_IMPULSE_DRPAI_RUNTIME_FAILED;
   }
 
@@ -331,50 +395,38 @@ EI_IMPULSE_ERROR drpai_run_classifier_image_quantized(bool debug) {
   // Wait until DRP-AI ends
   ret_drpai = pselect(drpai_fd + 1, &rfds, NULL, NULL, &tv, NULL);
   if (ret_drpai == 0) {
-    if (debug) {
-      ei_printf("ERR: DRPAI Inference pselect() Timeout: %d\n", errno);
-    }
+      EI_LOGE("DRPAI Inference pselect() Timeout: %d\n", errno);
     return EI_IMPULSE_DRPAI_RUNTIME_FAILED;
   } else if (ret_drpai < 0) {
-    if (debug) {
-      ei_printf("ERR: DRPAI Inference pselect() Error: %d\n", errno);
-    }
+      EI_LOGE("DRPAI Inference pselect() Error: %d\n", errno);
     return EI_IMPULSE_DRPAI_RUNTIME_FAILED;
   }
 
   // Checks for DRPAI inference status errors
   inf_status = ioctl(drpai_fd, DRPAI_GET_STATUS, &drpai_status);
   if (inf_status != 0) {
-    if (debug) {
-      ei_printf("ERR: DRPAI Internal Error: %d\n", errno);
-    }
+      EI_LOGE("DRPAI Internal Error: %d\n", errno);
     return EI_IMPULSE_DRPAI_RUNTIME_FAILED;
   }
 
   if (ioctl(drpai_fd, DRPAI_ASSIGN, &drpai_data) != 0) {
-    if (debug) {
-      ei_printf("ERR: Failed to Assign DRPAI data: %d\n", errno);
-    }
+      EI_LOGE("Failed to Assign DRPAI data: %d\n", errno);
     return EI_IMPULSE_DRPAI_RUNTIME_FAILED;
   }
 
   if (read(drpai_fd, drpai_output_buf, drpai_data.size) < 0) {
-    if (debug) {
-      ei_printf("ERR: Failed to read DRPAI output data: %d\n", errno);
-    }
+      EI_LOGE("Failed to read DRPAI output data: %d\n", errno);
     return EI_IMPULSE_DRPAI_RUNTIME_FAILED;
   }
   return EI_IMPULSE_OK;
 }
 
 // close the driver (reset file handles)
-EI_IMPULSE_ERROR drpai_close(bool debug) {
-  munmap(drpai_input_buf, EI_CLASSIFIER_NN_INPUT_FRAME_SIZE);
+EI_IMPULSE_ERROR drpai_close(uint32_t input_frame_size) {
+  munmap(drpai_input_buf, input_frame_size);
   if (drpai_fd > 0) {
     if (0 != close(drpai_fd)) {
-      if (debug) {
-        ei_printf("ERR: Failed to Close DRP-AI Driver: errno=%d\n", errno);
-      }
+        EI_LOGE("Failed to Close DRP-AI Driver: errno=%d\n", errno);
       return EI_IMPULSE_DRPAI_RUNTIME_FAILED;
     }
     drpai_fd = -1;
@@ -382,4 +434,117 @@ EI_IMPULSE_ERROR drpai_close(bool debug) {
   return EI_IMPULSE_OK;
 }
 
-#endif // DRPAI_H
+/**
+ * Special function to run the classifier on images, only works on TFLite models (either interpreter or EON or for tensaiflow)
+ * that allocates a lot less memory by quantizing in place. This only works if 'can_run_classifier_image_quantized'
+ * returns EI_IMPULSE_OK.
+ */
+EI_IMPULSE_ERROR run_nn_inference_image_quantized(
+    const ei_impulse_t *impulse,
+    signal_t *signal,
+    ei_impulse_result_t *result,
+    bool debug = false)
+{
+    static bool first_run = true;
+    uint64_t ctx_start_us;
+    uint64_t dsp_start_us = ei_read_timer_us();
+
+    if (first_run) {
+        // map memory regions to the DRP-AI UDMA. This is required for passing data
+        // to and from DRP-AI
+        int t = drpai_init_mem(impulse->nn_input_frame_size);
+        if (t != 0) {
+            return EI_IMPULSE_DRPAI_INIT_FAILED;
+        }
+
+        EI_IMPULSE_ERROR ret = drpai_init_classifier();
+        if (ret != EI_IMPULSE_OK) {
+            drpai_close(impulse->nn_input_frame_size);
+            return EI_IMPULSE_DRPAI_INIT_FAILED;
+        }
+    }
+
+    EI_LOGD("Starting DSP...\n");
+
+    // Creates a features matrix mapped to the DRP-AI UDMA input region
+    ei::matrix_i8_t features_matrix(1, proc[DRPAI_INDEX_INPUT].size, (int8_t *)drpai_input_buf);
+
+    // Grabs the raw image buffer from the signal, DRP-AI will automatically
+    // extract features
+    int ret = extract_drpai_features_quantized(
+        signal,
+        &features_matrix,
+        ei_dsp_blocks[0].config,
+        EI_CLASSIFIER_FREQUENCY);
+    if (ret != EIDSP_OK) {
+        ei_printf("ERR: Failed to run DSP process (%d)\n", ret);
+        return EI_IMPULSE_DSP_ERROR;
+    }
+
+    if (ei_run_impulse_check_canceled() == EI_IMPULSE_CANCELED) {
+        return EI_IMPULSE_CANCELED;
+    }
+
+    result->timing.dsp_us = ei_read_timer_us() - dsp_start_us;
+    result->timing.dsp = (int)(result->timing.dsp_us / 1000);
+
+#if EI_LOG_LEVEL >= EI_LOG_LEVEL_DEBUG
+        ei_printf("DSP was assigned address: 0x%lx\n", drpai_input_buf);
+        ei_printf("Features (%d ms.): ", result->timing.dsp);
+        for (size_t ix = 0; ix < EI_CLASSIFIER_NN_INPUT_FRAME_SIZE; ix++) {
+            ei_printf("0x%hhx, ", drpai_input_buf[ix]);
+        }
+        ei_printf("\n");
+#endif
+
+    ctx_start_us = ei_read_timer_us();
+
+    // Run DRP-AI inference, a static buffer is used to store the raw output
+    // results
+    ret = drpai_run_classifier_image_quantized();
+
+    // close driver to reset memory, file pointer
+    if (ret != EI_IMPULSE_OK) {
+        drpai_close(impulse->nn_input_frame_size);
+        first_run = true;
+    }
+    else {
+        // drpai_reset();
+        first_run = false;
+    }
+
+if (impulse->object_detection == EI_OBJECT_DETECTION_FOMO) {
+
+#if EI_LOG_LEVEL >= EI_LOG_LEVEL_DEBUG
+        ei_printf("DEBUG: raw drpai output");
+        ei_printf("\n[");
+        for (uint32_t i = 0; i < 12 * 12 * 2; i++) {
+            ei_printf_float(drpai_output_buf[i]);
+            ei_printf(" ");
+        }
+        ei_printf("]\n");
+#endif
+
+    fill_result_struct_f32_fomo(
+        impulse,
+        result,
+        drpai_output_buf,
+        impulse->input_width / 8,
+        impulse->input_height / 8);
+}
+
+else if (impulse->object_detection == EI_OBJECT_DETECTION_SSD) {
+    EI_LOGE("Output tensor formatting not yet implemented for DRP-AI");
+    return EI_IMPULSE_UNSUPPORTED_INFERENCING_ENGINE;
+}
+else {
+    fill_result_struct_f32(impulse, result, drpai_output_buf, debug);
+}
+
+    result->timing.classification_us = ei_read_timer_us() - ctx_start_us;
+    result->timing.classification = (int)(result->timing.classification_us / 1000);
+    return EI_IMPULSE_OK;
+}
+
+#endif // #if (EI_CLASSIFIER_INFERENCING_ENGINE == EI_CLASSIFIER_DRPAI)
+#endif // _EI_CLASSIFIER_INFERENCING_ENGINE_DRPAI_H_

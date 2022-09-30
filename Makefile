@@ -197,6 +197,7 @@ SRC_APP_C += \
 	$(notdir $(wildcard edge_impulse/edge-impulse-sdk/CMSIS/NN/Source/PoolingFunctions/*.c)) \
 	$(notdir $(wildcard edge_impulse/edge-impulse-sdk/CMSIS/NN/Source/ReshapeFunctions/*.c)) \
 	$(notdir $(wildcard edge_impulse/edge-impulse-sdk/CMSIS/NN/Source/SoftmaxFunctions/*.c)) \
+	$(notdir $(wildcard edge_impulse/edge-impulse-sdk/CMSIS/NN/Source/SVDFunctions/*.c)) \
 	$(notdir $(wildcard edge_impulse/QCBOR/src/*.c)) \
 	$(notdir $(wildcard edge_impulse/mbedtls_hmac_sha256_sw/mbedtls/src/*.c)) \
 	$(notdir $(wildcard edge_impulse/edge-impulse-sdk/tensorflow/lite/c/*.c)) \
@@ -232,6 +233,7 @@ VPATH += stdlib \
 	edge_impulse/edge-impulse-sdk/CMSIS/NN/Source/PoolingFunctions \
 	edge_impulse/edge-impulse-sdk/CMSIS/NN/Source/ReshapeFunctions \
 	edge_impulse/edge-impulse-sdk/CMSIS/NN/Source/SoftmaxFunctions \
+	edge_impulse/edge-impulse-sdk/CMSIS/NN/Source/SVDFunctions \
 	edge_impulse/tflite-model \
 	sensors \
 	sensors_sony_includes \
