@@ -1,50 +1,35 @@
 /****************************************************************************
  * apps/include/system/nxplayer.h
  *
- *   Copyright (C) 2013 Ken Pettit. All rights reserved.
- *   Author: Ken Pettit <pettitkd@gmail.com>
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.  The
+ * ASF licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the
+ * License.  You may obtain a copy of the License at
  *
- * With updates, enhancements, and modifications by:
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
- *   Author: Gregory Nutt <gnutt@nuttx.org>
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- *
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in
- *    the documentation and/or other materials provided with the
- *    distribution.
- * 3. Neither the name NuttX nor the names of its contributors may be
- *    used to endorse or promote products derived from this software
- *    without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
- * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
- * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
- * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
- * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
- * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
  *
  ****************************************************************************/
 
 #ifndef __APPS_INCLUDE_SYSTEM_NXPLAYER_H
-#define __APPS_INCLUDE_SYSTEM_NXPLAYER_H 1
+#define __APPS_INCLUDE_SYSTEM_NXPLAYER_H
 
 /****************************************************************************
  * Included Files
  ****************************************************************************/
 
 #include <nuttx/config.h>
+
+#include <mqueue.h>
+#include <pthread.h>
+#include <semaphore.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -53,28 +38,29 @@
 /****************************************************************************
  * Public Type Declarations
  ****************************************************************************/
+
 /* This structure describes the internal state of the NxPlayer */
 
 struct nxplayer_s
 {
-  int         state;          /* Current player state */
-  int         devFd;          /* File descriptor of active device */
-  mqd_t       mq;             /* Message queue for the playthread */
-  char        mqname[16];     /* Name of our message queue */
-  pthread_t   playId;         /* Thread ID of the playthread */
-  int         crefs;          /* Number of references to the player */
-  sem_t       sem;            /* Thread sync semaphore */
-  int         fd;         /* File descriptor of open file */
+  int         state;                       /* Current player state */
+  int         dev_fd;                      /* File descriptor of active device */
+  mqd_t       mq;                          /* Message queue for the playthread */
+  char        mqname[16];                  /* Name of our message queue */
+  pthread_t   play_id;                     /* Thread ID of the playthread */
+  int         crefs;                       /* Number of references to the player */
+  sem_t       sem;                         /* Thread sync semaphore */
+  int         fd;                          /* File descriptor of open file */
 #ifdef CONFIG_NXPLAYER_INCLUDE_PREFERRED_DEVICE
   char        prefdevice[CONFIG_NAME_MAX]; /* Preferred audio device */
-  int         prefformat;     /* Formats supported by preferred device */
-  int         preftype;       /* Types supported by preferred device */
+  int         prefformat;                  /* Formats supported by preferred device */
+  int         preftype;                    /* Types supported by preferred device */
 #endif
 #ifdef CONFIG_NXPLAYER_INCLUDE_MEDIADIR
   char        mediadir[CONFIG_NAME_MAX];   /* Root media directory where media is located */
 #endif
 #ifdef CONFIG_AUDIO_MULTI_SESSION
-  FAR void    *session;       /* Session assigment from device */
+  FAR void    *session;       /* Session assignment from device */
 #endif
 #ifndef CONFIG_AUDIO_EXCLUDE_VOLUME
   uint16_t    volume;         /* Volume as a whole percentage (0-100) */
@@ -88,7 +74,7 @@ struct nxplayer_s
 #endif
 };
 
-typedef int (*nxplayer_func)(FAR struct nxplayer_s *pPlayer, char *pargs);
+typedef int (*nxplayer_func)(FAR struct nxplayer_s *pplayer, char *pargs);
 
 /****************************************************************************
  * Public Data
@@ -119,7 +105,7 @@ extern "C"
  *   nxplayer_destroy() won't actually de-allocate anything.  The freeing
  *   will occur after the playthread has completed.
  *
- *   Alternately, the caller can create the objec and hold on to it, then
+ *   Alternately, the caller can create the object and hold on to it, then
  *   the context will persist until the original creator destroys it.
  *
  * Input Parameters:    None
@@ -138,14 +124,14 @@ FAR struct nxplayer_s *nxplayer_create(void);
  *   frees all memory used by the context.
  *
  * Input Parameters:
- *   pPlayer    Pointer to the NxPlayer context
+ *   pplayer    Pointer to the NxPlayer context
  *
  * Returned Value:
  *   None
  *
  ****************************************************************************/
 
-void nxplayer_release(FAR struct nxplayer_s *pPlayer);
+void nxplayer_release(FAR struct nxplayer_s *pplayer);
 
 /****************************************************************************
  * Name: nxplayer_reference
@@ -153,14 +139,14 @@ void nxplayer_release(FAR struct nxplayer_s *pPlayer);
  *   Increments the reference count to the player.
  *
  * Input Parameters:
- *   pPlayer    Pointer to the NxPlayer context
+ *   pplayer    Pointer to the NxPlayer context
  *
  * Returned Value:
  *   None
  *
  ****************************************************************************/
 
-void nxplayer_reference(FAR struct nxplayer_s *pPlayer);
+void nxplayer_reference(FAR struct nxplayer_s *pplayer);
 
 /****************************************************************************
  * Name: nxplayer_setdevice
@@ -172,7 +158,7 @@ void nxplayer_reference(FAR struct nxplayer_s *pPlayer);
  *   playing an MP3 file, a WAV decoder device for a WAV file, etc.).
  *
  * Input Parameters:
- *   pPlayer   - Pointer to the context to initialize
+ *   pplayer   - Pointer to the context to initialize
  *   device    - Pointer to pathname of the preferred device
  *
  * Returned Value:
@@ -180,7 +166,7 @@ void nxplayer_reference(FAR struct nxplayer_s *pPlayer);
  *
  ****************************************************************************/
 
-int nxplayer_setdevice(FAR struct nxplayer_s *pPlayer,
+int nxplayer_setdevice(FAR struct nxplayer_s *pplayer,
                        FAR const char *device);
 
 /****************************************************************************
@@ -192,7 +178,7 @@ int nxplayer_setdevice(FAR struct nxplayer_s *pPlayer,
  *   found in the /dev/audio directory will be used.
  *
  * Input Parameters:
- *   pPlayer   - Pointer to the context to initialize
+ *   pplayer   - Pointer to the context to initialize
  *   filename  - Pointer to pathname of the file to play
  *   filefmt   - Format of audio in filename if known, AUDIO_FMT_UNDEF
  *               to let nxplayer_playfile() determine automatically.
@@ -204,7 +190,7 @@ int nxplayer_setdevice(FAR struct nxplayer_s *pPlayer,
  *
  ****************************************************************************/
 
-int nxplayer_playfile(FAR struct nxplayer_s *pPlayer,
+int nxplayer_playfile(FAR struct nxplayer_s *pplayer,
                       FAR const char *filename, int filefmt, int subfmt);
 
 /****************************************************************************
@@ -216,20 +202,21 @@ int nxplayer_playfile(FAR struct nxplayer_s *pPlayer,
  *   found in the /dev/audio directory will be used.
  *
  * Input Parameters:
- *   pPlayer   - Pointer to the context to initialize
+ *   pplayer   - Pointer to the context to initialize
  *   filename  - Pointer to pathname of the file to play
  *   nchannels  channel num
  *   bpsampe    bit width
  *   samprate   sample rate
+ *   chmap      channel map
  *
  * Returned Value:
  *   OK if file found, device found, and playback started.
  *
  ****************************************************************************/
 
-int nxplayer_playraw(FAR struct nxplayer_s *pPlayer,
+int nxplayer_playraw(FAR struct nxplayer_s *pplayer,
                      FAR const char *filename, uint8_t nchannels,
-                     uint8_t bpsamp, uint32_t samprate);
+                     uint8_t bpsamp, uint32_t samprate, uint8_t chmap);
 
 /****************************************************************************
  * Name: nxplayer_stop
@@ -237,7 +224,7 @@ int nxplayer_playraw(FAR struct nxplayer_s *pPlayer,
  *   Stops current playback.
  *
  * Input Parameters:
- *   pPlayer   - Pointer to the context to initialize
+ *   pplayer   - Pointer to the context to initialize
  *
  * Returned Value:
  *   OK if file found, device found, and playback started.
@@ -245,7 +232,7 @@ int nxplayer_playraw(FAR struct nxplayer_s *pPlayer,
  ****************************************************************************/
 
 #ifndef CONFIG_AUDIO_EXCLUDE_STOP
-int nxplayer_stop(FAR struct nxplayer_s *pPlayer);
+int nxplayer_stop(FAR struct nxplayer_s *pplayer);
 #endif
 
 /****************************************************************************
@@ -254,7 +241,7 @@ int nxplayer_stop(FAR struct nxplayer_s *pPlayer);
  *   Pauses current playback.
  *
  * Input Parameters:
- *   pPlayer   - Pointer to the context to initialize
+ *   pplayer   - Pointer to the context to initialize
  *
  * Returned Value:
  *   OK if file found, device found, and playback started.
@@ -262,7 +249,7 @@ int nxplayer_stop(FAR struct nxplayer_s *pPlayer);
  ****************************************************************************/
 
 #ifndef CONFIG_AUDIO_EXCLUDE_PAUSE_RESUME
-int nxplayer_pause(FAR struct nxplayer_s *pPlayer);
+int nxplayer_pause(FAR struct nxplayer_s *pplayer);
 #endif
 
 /****************************************************************************
@@ -271,7 +258,7 @@ int nxplayer_pause(FAR struct nxplayer_s *pPlayer);
  *   Resumes current playback.
  *
  * Input Parameters:
- *   pPlayer   - Pointer to the context to initialize
+ *   pplayer   - Pointer to the context to initialize
  *
  * Returned Value:
  *   OK if file found, device found, and playback started.
@@ -279,7 +266,7 @@ int nxplayer_pause(FAR struct nxplayer_s *pPlayer);
  ****************************************************************************/
 
 #ifndef CONFIG_AUDIO_EXCLUDE_PAUSE_RESUME
-int nxplayer_resume(FAR struct nxplayer_s *pPlayer);
+int nxplayer_resume(FAR struct nxplayer_s *pplayer);
 #endif
 
 /****************************************************************************
@@ -294,7 +281,7 @@ int nxplayer_resume(FAR struct nxplayer_s *pPlayer);
  *   paused, non-playing state.
  *
  * Input Parameters:
- *   pPlayer   - Pointer to the context to initialize
+ *   pplayer   - Pointer to the context to initialize
  *   subsample - Identifies the fast forward rate (in terms of sub-sampling,
  *               but does not explicitly require sub-sampling).  See
  *               AUDIO_SUBSAMPLE_* definitions.
@@ -305,7 +292,7 @@ int nxplayer_resume(FAR struct nxplayer_s *pPlayer);
  ****************************************************************************/
 
 #ifndef CONFIG_AUDIO_EXCLUDE_FFORWARD
-int nxplayer_fforward(FAR struct nxplayer_s *pPlayer, uint8_t subsample);
+int nxplayer_fforward(FAR struct nxplayer_s *pplayer, uint8_t subsample);
 #endif
 
 /****************************************************************************
@@ -321,7 +308,7 @@ int nxplayer_fforward(FAR struct nxplayer_s *pPlayer, uint8_t subsample);
  *   AUDIO_SUBSAMPLE_NONE is not a valid argument to this function.
  *
  * Input Parameters:
- *   pPlayer   - Pointer to the context to initialize
+ *   pplayer   - Pointer to the context to initialize
  *   subsample - Identifies the rewind rate (in terms of sub-sampling, but
  *               does not explicitly require sub-sampling).  See
  *               AUDIO_SUBSAMPLE_* definitions.
@@ -332,7 +319,7 @@ int nxplayer_fforward(FAR struct nxplayer_s *pPlayer, uint8_t subsample);
  ****************************************************************************/
 
 #ifndef CONFIG_AUDIO_EXCLUDE_REWIND
-int nxplayer_rewind(FAR struct nxplayer_s *pPlayer, uint8_t subsample);
+int nxplayer_rewind(FAR struct nxplayer_s *pplayer, uint8_t subsample);
 #endif
 
 /****************************************************************************
@@ -342,7 +329,7 @@ int nxplayer_rewind(FAR struct nxplayer_s *pPlayer, uint8_t subsample);
  *   paused state or to the normal, forward play state.
  *
  * Input Parameters:
- *   pPlayer - Pointer to the context to initialize
+ *   pplayer - Pointer to the context to initialize
  *   paused  - True: return to the paused state, False: return to the 1X
  *             forward play state.
  *
@@ -352,7 +339,7 @@ int nxplayer_rewind(FAR struct nxplayer_s *pPlayer, uint8_t subsample);
  ****************************************************************************/
 
 #if !defined(CONFIG_AUDIO_EXCLUDE_FFORWARD) || !defined(CONFIG_AUDIO_EXCLUDE_REWIND)
-int nxplayer_cancel_motion(FAR struct nxplayer_s *pPlayer, bool paused);
+int nxplayer_cancel_motion(FAR struct nxplayer_s *pplayer, bool paused);
 #endif
 
 /****************************************************************************
@@ -363,7 +350,7 @@ int nxplayer_cancel_motion(FAR struct nxplayer_s *pPlayer, bool paused);
  *   1%.
  *
  * Input Parameters:
- *   pPlayer   - Pointer to the context to initialize
+ *   pplayer   - Pointer to the context to initialize
  *   volume    - Volume level to set in 1/10th percent increments
  *
  * Returned Value:
@@ -372,7 +359,7 @@ int nxplayer_cancel_motion(FAR struct nxplayer_s *pPlayer, bool paused);
  ****************************************************************************/
 
 #ifndef CONFIG_AUDIO_EXCLUDE_VOLUME
-int nxplayer_setvolume(FAR struct nxplayer_s *pPlayer, uint16_t volume);
+int nxplayer_setvolume(FAR struct nxplayer_s *pplayer, uint16_t volume);
 #endif
 
 /****************************************************************************
@@ -383,7 +370,7 @@ int nxplayer_setvolume(FAR struct nxplayer_s *pPlayer, uint16_t volume);
  *   1%.
  *
  * Input Parameters:
- *   pPlayer   - Pointer to the context to initialize
+ *   pplayer   - Pointer to the context to initialize
  *   balance   - Balance level to set in 1/10th percent increments
  *
  * Returned Value:
@@ -393,7 +380,7 @@ int nxplayer_setvolume(FAR struct nxplayer_s *pPlayer, uint16_t volume);
 
 #ifndef CONFIG_AUDIO_EXCLUDE_VOLUME
 #ifndef CONFIG_AUDIO_EXCLUDE_BALANCE
-int nxplayer_setbalance(FAR struct nxplayer_s *pPlayer, uint16_t balance);
+int nxplayer_setbalance(FAR struct nxplayer_s *pplayer, uint16_t balance);
 #endif
 #endif
 
@@ -403,7 +390,7 @@ int nxplayer_setbalance(FAR struct nxplayer_s *pPlayer, uint16_t balance);
  *   Sets the root media directory for non-path qualified file searches.
  *
  * Input Parameters:
- *   pPlayer   - Pointer to the context to initialize
+ *   pplayer   - Pointer to the context to initialize
  *   mediadir  - Pointer to pathname of the media directory
  *
  * Returned Value:
@@ -411,7 +398,7 @@ int nxplayer_setbalance(FAR struct nxplayer_s *pPlayer, uint16_t balance);
  *
  ****************************************************************************/
 
-void nxplayer_setmediadir(FAR struct nxplayer_s *pPlayer,
+void nxplayer_setmediadir(FAR struct nxplayer_s *pplayer,
                           FAR const char *mediadir);
 
 /****************************************************************************
@@ -421,7 +408,7 @@ void nxplayer_setmediadir(FAR struct nxplayer_s *pPlayer,
  *   represented in one percent increments, so the range is 0-100.
  *
  * Input Parameters:
- *   pPlayer      - Pointer to the context to initialize
+ *   pplayer      - Pointer to the context to initialize
  *   equalization - Pointer to array of equalizer settings of size
  *                  CONFIG_AUDIO_EQUALIZER_NBANDS bytes.  Each byte
  *                  represents the setting for one band in the range of
@@ -433,7 +420,7 @@ void nxplayer_setmediadir(FAR struct nxplayer_s *pPlayer,
  ****************************************************************************/
 
 #ifndef CONFIG_AUDIO_EXCLUDE_EQUALIZER
-int nxplayer_setequalization(FAR struct nxplayer_s *pPlayer,
+int nxplayer_setequalization(FAR struct nxplayer_s *pplayer,
                              FAR uint8_t *equalization);
 #endif
 
@@ -444,7 +431,7 @@ int nxplayer_setequalization(FAR struct nxplayer_s *pPlayer,
  *   increments, so the range is 0-100.
  *
  * Input Parameters:
- *   pPlayer   - Pointer to the context to initialize
+ *   pplayer   - Pointer to the context to initialize
  *   bass      - Bass level to set in one percent increments
  *
  * Returned Value:
@@ -453,7 +440,7 @@ int nxplayer_setequalization(FAR struct nxplayer_s *pPlayer,
  ****************************************************************************/
 
 #ifndef CONFIG_AUDIO_EXCLUDE_TONE
-int nxplayer_setbass(FAR struct nxplayer_s *pPlayer, uint8_t bass);
+int nxplayer_setbass(FAR struct nxplayer_s *pplayer, uint8_t bass);
 #endif
 
 /****************************************************************************
@@ -463,7 +450,7 @@ int nxplayer_setbass(FAR struct nxplayer_s *pPlayer, uint8_t bass);
  *   increments, so the range is 0-100.
  *
  * Input Parameters:
- *   pPlayer   - Pointer to the context to initialize
+ *   pplayer   - Pointer to the context to initialize
  *   treble    - Treble level to set in one percent increments
  *
  * Returned Value:
@@ -472,7 +459,7 @@ int nxplayer_setbass(FAR struct nxplayer_s *pPlayer, uint8_t bass);
  ****************************************************************************/
 
 #ifndef CONFIG_AUDIO_EXCLUDE_TONE
-int nxplayer_settreble(FAR struct nxplayer_s *pPlayer, uint8_t treble);
+int nxplayer_settreble(FAR struct nxplayer_s *pplayer, uint8_t treble);
 #endif
 
 /****************************************************************************
@@ -482,7 +469,7 @@ int nxplayer_settreble(FAR struct nxplayer_s *pPlayer, uint8_t treble);
  *   registered audio devices.
  *
  * Input Parameters:
- *   pPlayer   - Pointer to the context to initialize
+ *   pplayer   - Pointer to the context to initialize
  *
  * Returned Value:
  *   OK if file found, device found, and playback started.
@@ -490,7 +477,7 @@ int nxplayer_settreble(FAR struct nxplayer_s *pPlayer, uint8_t treble);
  ****************************************************************************/
 
 #ifdef CONFIG_NXPLAYER_INCLUDE_SYSTEM_RESET
-int nxplayer_systemreset(FAR struct nxplayer_s *pPlayer);
+int nxplayer_systemreset(FAR struct nxplayer_s *pplayer);
 #endif
 
 #undef EXTERN

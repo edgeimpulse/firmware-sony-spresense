@@ -1,35 +1,20 @@
 /****************************************************************************
  * include/nuttx/spinlock.h
  *
- *   Copyright (C) 2016, 2019 Gregory Nutt. All rights reserved.
- *   Author: Gregory Nutt <gnutt@nuttx.org>
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.  The
+ * ASF licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the
+ * License.  You may obtain a copy of the License at
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in
- *    the documentation and/or other materials provided with the
- *    distribution.
- * 3. Neither the name NuttX nor the names of its contributors may be
- *    used to endorse or promote products derived from this software
- *    without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
- * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
- * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
- * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
- * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
- * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
  *
  ****************************************************************************/
 
@@ -45,7 +30,13 @@
 #include <sys/types.h>
 #include <stdint.h>
 
-#ifdef CONFIG_SPINLOCK
+#include <nuttx/irq.h>
+
+#ifndef CONFIG_SPINLOCK
+typedef struct
+{
+} spinlock_t;
+#else
 
 /* The architecture specific spinlock.h header file must also provide the
  * following:
@@ -54,7 +45,7 @@
  *   SP_UNLOCKED - A definition of the unlocked state value (usually 0)
  *   spinlock_t  - The type of a spinlock memory object.
  *
- * SP_LOCKED and SP_UNLOCKED must constants of type spinlock_t.
+ * SP_LOCKED and SP_UNLOCKED must be constants of type spinlock_t.
  */
 
 #include <arch/spinlock.h>
@@ -80,20 +71,16 @@
 #  define SP_DSB()
 #endif
 
-#if defined(CONFIG_SCHED_INSTRUMENTATION_SPINLOCKS) && !defined(__SP_UNLOCK_FUNCTION)
-#  define __SP_UNLOCK_FUNCTION 1
+#if !defined(SP_WFE)
+#  define SP_WFE()
 #endif
 
-/* If the target CPU supports a data cache then it may be necessary to
- * manage spinlocks in a special way, perhaps linking them all into a
- * special non-cacheable memory region.
- *
- *   SP_SECTION - Special storage attributes may be required to force
- *      spinlocks into a special, non-cacheable section.
- */
+#if !defined(SP_SEV)
+#  define SP_SEV()
+#endif
 
-#if !defined(SP_SECTION)
-#  define SP_SECTION
+#if defined(CONFIG_SCHED_INSTRUMENTATION_SPINLOCKS) && !defined(__SP_UNLOCK_FUNCTION)
+#  define __SP_UNLOCK_FUNCTION 1
 #endif
 
 /****************************************************************************
@@ -109,24 +96,46 @@
  *   This function must be provided via the architecture-specific logic.
  *
  * Input Parameters:
- *   lock - The address of spinlock object.
+ *   lock  - A reference to the spinlock object.
  *
  * Returned Value:
- *   The spinlock is always locked upon return.  The value of previous value
- *   of the spinlock variable is returned, either SP_LOCKED if the spinlock
- *   as previously locked (meaning that the test-and-set operation failed to
+ *   The spinlock is always locked upon return.  The previous value of the
+ *   spinlock variable is returned, either SP_LOCKED if the spinlock was
+ *   previously locked (meaning that the test-and-set operation failed to
  *   obtain the lock) or SP_UNLOCKED if the spinlock was previously unlocked
- *   (meaning that we successfully obtained the lock)
+ *   (meaning that we successfully obtained the lock).
  *
  ****************************************************************************/
 
+#if defined(CONFIG_ARCH_HAVE_TESTSET)
 spinlock_t up_testset(volatile FAR spinlock_t *lock);
+#elif !defined(CONFIG_SMP)
+static inline spinlock_t up_testset(volatile FAR spinlock_t *lock)
+{
+  irqstate_t flags;
+  spinlock_t ret;
+
+  flags = up_irq_save();
+
+  ret = *lock;
+
+  if (ret == SP_UNLOCKED)
+    {
+      *lock = SP_LOCKED;
+    }
+
+  up_irq_restore(flags);
+
+  return ret;
+}
+#endif
 
 /****************************************************************************
  * Name: spin_initialize
  *
  * Description:
- *   Initialize a non-reentrant spinlock object to its initial, unlocked state.
+ *   Initialize a non-reentrant spinlock object to its initial,
+ *   unlocked state.
  *
  * Input Parameters:
  *   lock  - A reference to the spinlock object to be initialized.
@@ -149,7 +158,7 @@ spinlock_t up_testset(volatile FAR spinlock_t *lock);
  *
  *   This implementation is non-reentrant and is prone to deadlocks in
  *   the case that any logic on the same CPU attempts to take the lock
- *   more than one
+ *   more than once.
  *
  * Input Parameters:
  *   lock - A reference to the spinlock object to lock.
@@ -343,4 +352,79 @@ void spin_clrbit(FAR volatile cpu_set_t *set, unsigned int cpu,
 #endif
 
 #endif /* CONFIG_SPINLOCK */
+
+/****************************************************************************
+ * Name: spin_lock_irqsave
+ *
+ * Description:
+ *   If SMP is are enabled:
+ *     If the argument lock is not specified (i.e. NULL),
+ *     disable local interrupts and take the global spinlock (g_irq_spin)
+ *     if the call counter (g_irq_spin_count[cpu]) equals to 0. Then the
+ *     counter on the CPU is incremented to allow nested calls and return
+ *     the interrupt state.
+ *
+ *     If the argument lock is specified,
+ *     disable local interrupts and take the lock spinlock and return
+ *     the interrupt state.
+ *
+ *     NOTE: This API is very simple to protect data (e.g. H/W register
+ *     or internal data structure) in SMP mode. But do not use this API
+ *     with kernel APIs which suspend a caller thread. (e.g. nxsem_wait)
+ *
+ *   If SMP is not enabled:
+ *     This function is equivalent to up_irq_save().
+ *
+ * Input Parameters:
+ *   lock - Caller specific spinlock. If specified NULL, g_irq_spin is used
+ *          and can be nested. Otherwise, nested call for the same lock
+ *          would cause a deadlock
+ *
+ * Returned Value:
+ *   An opaque, architecture-specific value that represents the state of
+ *   the interrupts prior to the call to spin_lock_irqsave(lock);
+ *
+ ****************************************************************************/
+
+#if defined(CONFIG_SMP)
+irqstate_t spin_lock_irqsave(spinlock_t *lock);
+#else
+#  define spin_lock_irqsave(l) ((void)(l), up_irq_save())
+#endif
+
+/****************************************************************************
+ * Name: spin_unlock_irqrestore
+ *
+ * Description:
+ *   If SMP is enabled:
+ *     If the argument lock is not specified (i.e. NULL),
+ *     decrement the call counter (g_irq_spin_count[cpu]) and if it
+ *     decrements to zero then release the spinlock (g_irq_spin) and
+ *     restore the interrupt state as it was prior to the previous call to
+ *     spin_lock_irqsave(NULL).
+ *
+ *     If the argument lock is specified, release the lock and
+ *     restore the interrupt state as it was prior to the previous call to
+ *     spin_lock_irqsave(lock).
+ *
+ *   If SMP is not enabled:
+ *     This function is equivalent to up_irq_restore().
+ *
+ * Input Parameters:
+ *   lock - Caller specific spinlock. If specified NULL, g_irq_spin is used.
+ *
+ *   flags - The architecture-specific value that represents the state of
+ *           the interrupts prior to the call to spin_lock_irqsave(lock);
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+#if defined(CONFIG_SMP)
+void spin_unlock_irqrestore(spinlock_t *lock, irqstate_t flags);
+#else
+#  define spin_unlock_irqrestore(l, f) up_irq_restore(f)
+#endif
+
 #endif /* __INCLUDE_NUTTX_SPINLOCK_H */

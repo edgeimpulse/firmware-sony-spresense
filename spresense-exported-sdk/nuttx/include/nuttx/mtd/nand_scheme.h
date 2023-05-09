@@ -1,13 +1,6 @@
 /****************************************************************************
  * include/nuttx/mtd/nand_scheme.h
  *
- *   Copyright (C) 2013 Gregory Nutt. All rights reserved.
- *   Author: Gregory Nutt <gnutt@nuttx.org>
- *
- * This logic was based largely on Atmel sample code with modifications for
- * better integration with NuttX.  The Atmel sample code has a BSD
- * compatibile license that requires this copyright notice:
- *
  *   Copyright (c) 2012, Atmel Corporation
  *
  * Redistribution and use in source and binary forms, with or without
@@ -300,7 +293,7 @@ void nandscheme_writeextra(FAR const struct nand_scheme_s *scheme,
  *
  * Input Parameters:
  *   scheme  Pointer to a nand_scheme_s instance.
- *   spareSize Size of spare area.
+ *   sparesize Size of spare area.
  *   offset  Index where to write the first extra byte.
  *   size    Number of extra bytes to write.
  *   offset  Index where to write the first extra byte.
@@ -311,7 +304,7 @@ void nandscheme_writeextra(FAR const struct nand_scheme_s *scheme,
  ****************************************************************************/
 
 int nandscheme_build4086(FAR struct nand_scheme_s *scheme,
-                         unsigned int spareSize, unsigned int eccOffset);
+                         unsigned int sparesize, unsigned int eccoffset);
 
 #undef EXTERN
 #ifdef __cplusplus

@@ -88,3 +88,14 @@ If you have multiple toolchains installed, you can override the compiler via:
 ```
 $ CROSS_COMPILE=~/toolchains/gcc-arm-none-eabi-9-2019-q4-major/bin/arm-none-eabi- make -j
 ```
+
+## Troubleshoot
+
+The latest Sony Spresense SDK requires to have the bootloader on device updated to the latest version. If you encounter following message during startup the bootloader is outdated:
+
+```
+cxd56_farapiinitialize: Mismatched version: loader(2015) != Self(20585)
+cxd56_farapiiitialize: Please update loader and gnssfw firmwares!!
+```
+
+Uploading the Sony Spresense bootloader is done using the Arduino IDE. Follow the [Spresense Arduino Library Getting Started Guide](https://developer.sony.com/develop/spresense/docs/arduino_set_up_en.html) for instructions.

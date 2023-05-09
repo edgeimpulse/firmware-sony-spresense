@@ -91,7 +91,11 @@ File::File(const char *name, uint8_t mode)
   _name = strdup(name);
   if (_fd >= 0) {
     _size = stat.st_size;
-    _curpos = ::lseek(_fd, 0, SEEK_CUR);
+    if (mode == FILE_WRITE) {
+      _curpos = ::lseek(_fd, 0, SEEK_END);
+    } else {
+      _curpos = ::lseek(_fd, 0, SEEK_CUR);
+    }
   }
 }
 
@@ -187,6 +191,12 @@ bool File::seek(uint32_t pos) {
   } else {
     return false;
   }
+}
+
+void File::remove(const char *name) {
+  ::close(_fd);
+  _fd = ::open(name, FILE_DELETE);
+
 }
 
 uint32_t File::position() {

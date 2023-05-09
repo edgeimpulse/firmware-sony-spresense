@@ -1,36 +1,20 @@
 /****************************************************************************
  * include/nuttx/compiler.h
  *
- *   Copyright (C) 2007-2009, 2012-2013, 2015-2017 Gregory Nutt. All rights
- *     reserved.
- *   Author: Gregory Nutt <gnutt@nuttx.org>
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.  The
+ * ASF licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the
+ * License.  You may obtain a copy of the License at
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in
- *    the documentation and/or other materials provided with the
- *    distribution.
- * 3. Neither the name NuttX nor the names of its contributors may be
- *    used to endorse or promote products derived from this software
- *    without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
- * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
- * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
- * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
- * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
- * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
  *
  ****************************************************************************/
 
@@ -65,18 +49,36 @@
 
 /* Indicate that a local variable is not used */
 
-#  define UNUSED(a) ((void)(a))
+#  define UNUSED(a) ((void)(1 || (a)))
 
 /* Built-in functions */
+
+/* The <stddef.h> header shall define the following macros:
+ *
+ * offsetof(type, member-designator)
+ *   Integer constant expression of type size_t, the value of which is the
+ *   offset in bytes to the structure member (member-designator), from the
+ *   beginning of its structure (type).
+ *
+ *     NOTE: This version of offsetof() depends on behaviors that could be
+ *     undefined for some compilers.  It would be better to use a builtin
+ *     function if one exists.
+ *
+ * Reference: Opengroup.org
+ */
+
+#  define offsetof(a, b) __builtin_offsetof(a, b)
 
 /* GCC 4.x have __builtin_ctz(|l|ll) and __builtin_clz(|l|ll). These count
  * trailing/leading zeros of input number and typically will generate few
  * fast bit-counting instructions. Inputting zero to these functions is
- * undefined and needs to be taken care of by the caller. */
+ * undefined and needs to be taken care of by the caller.
+ */
 
 #if __GNUC__ >= 4
-#  define CONFIG_HAVE_BUILTIN_CTZ 1
-#  define CONFIG_HAVE_BUILTIN_CLZ 1
+#  define CONFIG_HAVE_BUILTIN_CTZ      1
+#  define CONFIG_HAVE_BUILTIN_CLZ      1
+#  define CONFIG_HAVE_BUILTIN_POPCOUNT 1
 #endif
 
 /* C++ support */
@@ -97,11 +99,13 @@
 #  define CONFIG_HAVE_WEAKFUNCTIONS 1
 #  define weak_alias(name, aliasname) \
    extern __typeof (name) aliasname __attribute__ ((weak, alias (#name)));
+#  define weak_data __attribute__ ((weak))
 #  define weak_function __attribute__ ((weak))
 #  define weak_const_function __attribute__ ((weak, __const__))
 # else
 #  undef  CONFIG_HAVE_WEAKFUNCTIONS
 #  define weak_alias(name, aliasname)
+#  define weak_data
 #  define weak_function
 #  define weak_const_function
 # endif
@@ -118,9 +122,17 @@
 
 #  define farcall_function __attribute__ ((long_call))
 
+/* Code locate */
+
+#  define locate_code(n) __attribute__ ((section(n)))
+
 /* Data alignment */
 
 #  define aligned_data(n) __attribute__ ((aligned(n)))
+
+/* Data location */
+
+#  define locate_data(n) __attribute__ ((section(n)))
 
 /* The packed attribute informs GCC that the structure elements are packed,
  * ignoring other alignment rules.
@@ -140,12 +152,59 @@
 #  define naked_function __attribute__ ((naked,no_instrument_function))
 
 /* The inline_function attribute informs GCC that the function should always
- * be inlined, regardless of the level of optimization.  The noinline_function
- * indicates that the function should never be inlined.
+ * be inlined, regardless of the level of optimization.  The
+ * noinline_function indicates that the function should never be inlined.
  */
 
 #  define inline_function __attribute__ ((always_inline,no_instrument_function))
 #  define noinline_function __attribute__ ((noinline))
+
+/* The noinstrument_function attribute informs GCC don't instrument it */
+
+#  define noinstrument_function __attribute__ ((no_instrument_function))
+
+/* The nostackprotect_function attribute disables stack protection in
+ * sensitive functions, e.g., stack coloration routines.
+ */
+
+#if defined(__has_attribute)
+#  if __has_attribute(no_stack_protector)
+#    define nostackprotect_function __attribute__ ((no_stack_protector))
+#  endif
+#endif
+
+/* nostackprotect_function definition for older versions of GCC and Clang.
+ * Note that Clang does not support setting per-function optimizations,
+ * simply disable the entire optimization pass for the required function.
+ */
+
+#ifndef nostackprotect_function
+#  if defined(__clang__)
+#    define nostackprotect_function __attribute__ ((optnone))
+#  else
+#    define nostackprotect_function __attribute__ ((__optimize__ ("-fno-stack-protector")))
+#  endif
+#endif
+
+/* The unsued code or data */
+
+#  define unused_code __attribute__((unused))
+#  define unused_data __attribute__((unused))
+
+/* Some versions of GCC have a separate __syslog__ format.
+ * http://mail-index.netbsd.org/source-changes/2015/10/14/msg069435.html
+ * Use it if available. Otherwise, assume __printf__ accepts %m.
+ */
+
+#  if !defined(__syslog_attribute__)
+#    define __syslog__ __printf__
+#  endif
+
+#  define formatlike(a) __attribute__((__format_arg__ (a)))
+#  define printflike(a, b) __attribute__((__format__ (__printf__, a, b)))
+#  define sysloglike(a, b) __attribute__((__format__ (__syslog__, a, b)))
+#  define scanflike(a, b) __attribute__((__format__ (__scanf__, a, b)))
+#  define strftimelike(a) __attribute__((__format__ (__strftime__, a, 0)))
 
 /* GCC does not use storage classes to qualify addressing */
 
@@ -153,6 +212,13 @@
 #  define NEAR
 #  define DSEG
 #  define CODE
+
+/* Define these here and allow specific architectures to override as needed */
+
+#  define CONFIG_HAVE_LONG_LONG 1
+#  define CONFIG_HAVE_FLOAT 1
+#  define CONFIG_HAVE_DOUBLE 1
+#  define CONFIG_HAVE_LONG_DOUBLE 1
 
 /* Handle cases where sizeof(int) is 16-bits, sizeof(long) is 32-bits, and
  * pointers are 16-bits.
@@ -242,6 +308,30 @@
 #   define CONFIG_PTR_IS_NOT_INT 1
 # endif
 
+#elif defined(_EZ80ACCLAIM)
+
+/* No I-space access qualifiers */
+
+#  define IOBJ
+#  define IPTR
+
+/* Select the large, 24-bit addressing model */
+
+#  undef  CONFIG_SMALL_MEMORY
+
+/* int is 24-bits, long is 32-bits */
+
+#  define CONFIG_LONG_IS_NOT_INT 1
+
+/* pointers are 24-bits too */
+
+#  undef  CONFIG_PTR_IS_NOT_INT
+
+/* the ez80 stdlib doesn't support doubles */
+
+#  undef  CONFIG_HAVE_DOUBLE
+#  undef  CONFIG_HAVE_LONG_DOUBLE
+
 #else
 
 /* No I-space access qualifiers */
@@ -260,16 +350,8 @@
 /* Pointers and int are the same size (32-bits) */
 
 #  undef  CONFIG_PTR_IS_NOT_INT
+
 #endif
-
-/* GCC supports inlined functions for C++ and for C version C99 and above */
-
-#  if defined(__cplusplus) || !defined(__STDC_VERSION__) || __STDC_VERSION__ >= 199901L
-#    define CONFIG_HAVE_INLINE 1
-#  else
-#    undef CONFIG_HAVE_INLINE
-#    define inline
-#  endif
 
 /* ISO C11 supports anonymous (unnamed) structures and unions, added in
  * GCC 4.6 (but might be suppressed with -std= option).  ISO C++11 also
@@ -277,8 +359,8 @@
  * may support them).
  *
  * CAREFUL: This can cause issues for shared data structures shared between
- * C and C++ if the two versions do not support the same features.  Structures
- * and unions can lose binary compatibility!
+ * C and C++ if the two versions do not support the same features.
+ * Structures and unions can lose binary compatibility!
  *
  * NOTE: The NuttX coding standard forbids the use of unnamed structures and
  * unions within the OS.
@@ -293,22 +375,9 @@
 #    define CONFIG_HAVE_ANONYMOUS_UNION 1
 #  endif
 
-/* GCC supports both types double and long long */
-
-#  ifndef __clang__
-#    define CONFIG_HAVE_LONG_LONG 1
-#  endif
-#  define CONFIG_HAVE_FLOAT 1
-#  define CONFIG_HAVE_DOUBLE 1
-#  define CONFIG_HAVE_LONG_DOUBLE 1
-
-/* Structures and unions can be assigned and passed as values */
-
-#  define CONFIG_CAN_PASS_STRUCTS 1
-
 /* Indicate that a local variable is not used */
 
-#  define UNUSED(a) ((void)(a))
+#  define UNUSED(a) ((void)(1 || (a)))
 
 /* SDCC-specific definitions ************************************************/
 
@@ -332,7 +401,8 @@
 
 /* Pragmas
  *
- * Disable warnings for unused function arguments */
+ * Disable warnings for unused function arguments
+ */
 
 # pragma disable_warning 85
 
@@ -342,21 +412,26 @@
 
 /* Attributes
  *
- * SDCC does not support weak symbols */
+ * SDCC does not support weak symbols
+ */
 
 #  undef  CONFIG_HAVE_WEAKFUNCTIONS
 #  define weak_alias(name, aliasname)
+#  define weak_data
 #  define weak_function
 #  define weak_const_function
 #  define restrict /* REVISIT */
 
 /* SDCC does not support the noreturn or packed attributes */
+
 /* Current SDCC supports noreturn via C11 _Noreturn keyword (see
  * stdnoreturn.h).
  */
 
 #  define noreturn_function
+#  define locate_code(n)
 #  define aligned_data(n)
+#  define locate_data(n)
 #  define begin_packed_struct
 #  define end_packed_struct
 
@@ -372,6 +447,17 @@
 
 #  define inline_function
 #  define noinline_function
+#  define noinstrument_function
+#  define nostackprotect_function
+
+#  define unused_code
+#  define unused_data
+
+#  define formatlike(a)
+#  define printflike(a, b)
+#  define sysloglike(a, b)
+#  define scanflike(a, b)
+#  define strftimelike(a)
 
 /* The reentrant attribute informs SDCC that the function
  * must be reentrant.  In this case, SDCC will store input
@@ -390,7 +476,7 @@
 
 /* Indicate that a local variable is not used */
 
-#  define UNUSED(a) ((void)(a))
+#  define UNUSED(a) ((void)(1 || (a)))
 
 /* It is assumed that the system is build using the small
  * data model with storage defaulting to internal RAM.
@@ -432,10 +518,6 @@
 #  define CONFIG_PTR_IS_NOT_INT 1
 #endif
 
-/* New versions of SDCC supports inline function */
-
-#  define CONFIG_HAVE_INLINE 1
-
 /* SDCC does types long long and float, but not types double and long
  * double.
  */
@@ -445,15 +527,11 @@
 #  undef  CONFIG_HAVE_DOUBLE
 #  undef  CONFIG_HAVE_LONG_DOUBLE
 
-/* Structures and unions cannot be passed as values or used
- * in assignments.
- */
-
-#  undef  CONFIG_CAN_PASS_STRUCTS
-
 /* Indicate that a local variable is not used */
 
-#  define UNUSED(a) ((void)(a))
+#  define UNUSED(a) ((void)(1 || (a)))
+
+#  define offsetof(a, b) ((size_t)(&(((a *)(0))->b)))
 
 /* Zilog-specific definitions ***********************************************/
 
@@ -491,6 +569,7 @@
 
 #  undef  CONFIG_HAVE_WEAKFUNCTIONS
 #  define weak_alias(name, aliasname)
+#  define weak_data
 #  define weak_function
 #  define weak_const_function
 #  define restrict
@@ -501,11 +580,22 @@
 
 #  define noreturn_function
 #  define aligned_data(n)
+#  define locate_code(n)
+#  define locate_data(n)
 #  define begin_packed_struct
 #  define end_packed_struct
 #  define naked_function
 #  define inline_function
 #  define noinline_function
+#  define noinstrument_function
+#  define nostackprotect_function
+#  define unused_code
+#  define unused_data
+#  define formatlike(a)
+#  define printflike(a, b)
+#  define sysloglike(a, b)
+#  define scanflike(a, b)
+#  define strftimelike(a)
 
 /* REVISIT: */
 
@@ -523,8 +613,8 @@
  * Z8Encore!:  Far is 16-bits; near is 8-bits of address.
  *             The supported model is (1) all code on ROM, and (2) all data
  *             and stacks in internal (far) RAM.
- * Z8Acclaim:  In Z80 mode, all pointers are 16-bits.  In ADL mode, all pointers
- *             are 24 bits.
+ * Z8Acclaim:  In Z80 mode, all pointers are 16-bits.  In ADL mode, all
+ *             pointers are 24 bits.
  */
 
 #  if defined(__ZNEO__)
@@ -557,11 +647,6 @@
 #    endif
 #  endif
 
-/* The Zilog compiler does not support inline functions */
-
-#  undef  CONFIG_HAVE_INLINE
-#  define inline
-
 /* ISO C11 supports anonymous (unnamed) structures and unions.  Zilog does
  * not support C11
  */
@@ -569,9 +654,9 @@
 #  undef CONFIG_HAVE_ANONYMOUS_STRUCT
 #  undef  CONFIG_HAVE_ANONYMOUS_UNION
 
-/* Older Zilog compilers support both types double and long long, but the size
- * is 32-bits (same as long and single precision) so it is safer to say that
- * they are not supported.  Later versions are more ANSII compliant and
+/* Older Zilog compilers support both types double and long long, but the
+ * size is 32-bits (same as long and single precision) so it is safer to say
+ * that they are not supported.  Later versions are more ANSII compliant and
  * simply do not support long long or double.
  */
 
@@ -580,38 +665,48 @@
 #  undef  CONFIG_HAVE_DOUBLE
 #  undef  CONFIG_HAVE_LONG_DOUBLE
 
-/* Structures and unions can be assigned and passed as values */
-
-#  define CONFIG_CAN_PASS_STRUCTS 1
-
 /* Indicate that a local variable is not used */
 
-#  define UNUSED(a) ((void)(a))
+#  define UNUSED(a) ((void)(1 || (a)))
 
-/* ICCARM-specific definitions ***********************************************/
+#  define offsetof(a, b) ((size_t)(&(((a *)(0))->b)))
+
+/* ICCARM-specific definitions **********************************************/
 
 #elif defined(__ICCARM__)
 
 #  define CONFIG_CPP_HAVE_VARARGS 1 /* Supports variable argument macros */
-#  define CONFIG_HAVE_FILENAME 1 /* Has __FILE__ */
+#  define CONFIG_HAVE_FILENAME 1    /* Has __FILE__ */
 #  define CONFIG_HAVE_FLOAT 1
 
 /* Indicate that a local variable is not used */
 
-#  define UNUSED(a) ((void)(a))
+#  define UNUSED(a) ((void)(1 || (a)))
 
 #  define weak_alias(name, aliasname)
+#  define weak_data            __weak
 #  define weak_function        __weak
 #  define weak_const_function
 #  define noreturn_function
 #  define farcall_function
+#  define locate_code(n)
 #  define aligned_data(n)
+#  define locate_data(n)
 #  define begin_packed_struct  __packed
 #  define end_packed_struct
 #  define reentrant_function
 #  define naked_function
 #  define inline_function
 #  define noinline_function
+#  define noinstrument_function
+#  define nostackprotect_function
+#  define unused_code
+#  define unused_data
+#  define formatlike(a)
+#  define printflike(a, b)
+#  define sysloglike(a, b)
+#  define scanflike(a, b)
+#  define strftimelike(a)
 
 #  define FAR
 #  define NEAR
@@ -634,10 +729,14 @@
 
 #  undef CONFIG_HAVE_CXX14
 
-/* ISO C11 supports anonymous (unnamed) structures and unions.  Does ICCARM? */
+/* ISO C11 supports anonymous (unnamed) structures and unions.  Does
+ * ICCARM?
+ */
 
 #  undef CONFIG_HAVE_ANONYMOUS_STRUCT
 #  undef  CONFIG_HAVE_ANONYMOUS_UNION
+
+#  define offsetof(a, b) ((size_t)(&(((a *)(0))->b)))
 
 /* Unknown compiler *********************************************************/
 
@@ -650,18 +749,30 @@
 #  undef  CONFIG_HAVE_WEAKFUNCTIONS
 #  undef CONFIG_HAVE_CXX14
 #  define weak_alias(name, aliasname)
+#  define weak_data
 #  define weak_function
 #  define weak_const_function
 #  define restrict
 #  define noreturn_function
 #  define farcall_function
 #  define aligned_data(n)
+#  define locate_code(n)
+#  define locate_data(n)
 #  define begin_packed_struct
 #  define end_packed_struct
 #  define reentrant_function
 #  define naked_function
 #  define inline_function
 #  define noinline_function
+#  define noinstrument_function
+#  define nostackprotect_function
+#  define unused_code
+#  define unused_data
+#  define formatlike(a)
+#  define printflike(a, b)
+#  define sysloglike(a, b)
+#  define scanflike(a, b)
+#  define strftimelike(a)
 
 #  define FAR
 #  define NEAR
@@ -671,17 +782,16 @@
 #  undef  CONFIG_SMALL_MEMORY
 #  undef  CONFIG_LONG_IS_NOT_INT
 #  undef  CONFIG_PTR_IS_NOT_INT
-#  undef  CONFIG_HAVE_INLINE
-#  define inline
 #  undef  CONFIG_HAVE_LONG_LONG
 #  define CONFIG_HAVE_FLOAT 1
 #  undef  CONFIG_HAVE_DOUBLE
 #  undef  CONFIG_HAVE_LONG_DOUBLE
-#  undef  CONFIG_CAN_PASS_STRUCTS
 #  undef  CONFIG_HAVE_ANONYMOUS_STRUCT
 #  undef  CONFIG_HAVE_ANONYMOUS_UNION
 
-#  define UNUSED(a) ((void)(a))
+#  define UNUSED(a) ((void)(1 || (a)))
+
+#  define offsetof(a, b) ((size_t)(&(((a *)(0))->b)))
 
 #endif
 

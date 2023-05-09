@@ -1,30 +1,26 @@
-/* Edge Impulse inferencing library
- * Copyright (c) 2021 EdgeImpulse Inc.
+/*
+ * Copyright (c) 2022 EdgeImpulse Inc.
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an "AS
+ * IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language
+ * governing permissions and limitations under the License.
  *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 #ifndef _EI_CLASSIFIER_SMOOTH_H_
 #define _EI_CLASSIFIER_SMOOTH_H_
 
+#if EI_CLASSIFIER_OBJECT_DETECTION != 1
+
 #include <stdint.h>
-#include "edge-impulse-sdk/classifier/ei_classifier_types.h"
 
 typedef struct ei_classifier_smooth {
     int *last_readings;
@@ -32,8 +28,8 @@ typedef struct ei_classifier_smooth {
     uint8_t min_readings_same;
     float classifier_confidence;
     float anomaly_confidence;
-    uint8_t count[EI_CLASSIFIER_MAX_LABELS_COUNT + 2] = { 0 };
-    size_t count_size = EI_CLASSIFIER_MAX_LABELS_COUNT + 2;
+    uint8_t count[EI_CLASSIFIER_LABEL_COUNT + 2] = { 0 };
+    size_t count_size = EI_CLASSIFIER_LABEL_COUNT + 2;
 } ei_classifier_smooth_t;
 
 /**
@@ -47,9 +43,9 @@ typedef struct ei_classifier_smooth {
  * @param classifier_confidence Minimum confidence in a class (default 0.8)
  * @param anomaly_confidence Maximum error for anomalies (default 0.3)
  */
-void ei_classifier_smooth_init(const ei_impulse_t *impulse, ei_classifier_smooth_t *smooth,
-                               size_t n_readings, uint8_t min_readings_same,
-                               float classifier_confidence = 0.8, float anomaly_confidence = 0.3) {
+void ei_classifier_smooth_init(ei_classifier_smooth_t *smooth, size_t n_readings,
+                               uint8_t min_readings_same, float classifier_confidence = 0.8,
+                               float anomaly_confidence = 0.3) {
     smooth->last_readings = (int*)ei_malloc(n_readings * sizeof(int));
     for (size_t ix = 0; ix < n_readings; ix++) {
         smooth->last_readings[ix] = -1; // -1 == uncertain
@@ -58,7 +54,7 @@ void ei_classifier_smooth_init(const ei_impulse_t *impulse, ei_classifier_smooth
     smooth->min_readings_same = min_readings_same;
     smooth->classifier_confidence = classifier_confidence;
     smooth->anomaly_confidence = anomaly_confidence;
-    smooth->count_size = impulse->label_count + 2;
+    smooth->count_size = EI_CLASSIFIER_LABEL_COUNT + 2;
 }
 
 /**
@@ -67,11 +63,9 @@ void ei_classifier_smooth_init(const ei_impulse_t *impulse, ei_classifier_smooth
  * @param result Pointer to a result structure (after calling ei_run_classifier)
  * @returns Label, either 'uncertain', 'anomaly', or a label from the result struct
  */
-const char* ei_classifier_smooth_update(const ei_impulse_t *impulse, 
-                                        ei_classifier_smooth_t *smooth,
-                                        ei_impulse_result_t *result) {
+const char* ei_classifier_smooth_update(ei_classifier_smooth_t *smooth, ei_impulse_result_t *result) {
     // clear out the count array
-    memset(smooth->count, 0, impulse->label_count + 2);
+    memset(smooth->count, 0, EI_CLASSIFIER_LABEL_COUNT + 2);
 
     // roll through the last_readings buffer
     numpy::roll(smooth->last_readings, smooth->last_readings_size, -1);
@@ -80,7 +74,7 @@ const char* ei_classifier_smooth_update(const ei_impulse_t *impulse,
 
     // print the predictions
     // printf("[");
-    for (size_t ix = 0; ix < impulse->label_count; ix++) {
+    for (size_t ix = 0; ix < EI_CLASSIFIER_LABEL_COUNT; ix++) {
         if (result->classification[ix].value >= smooth->classifier_confidence) {
             reading = (int)ix;
         }
@@ -99,10 +93,10 @@ const char* ei_classifier_smooth_update(const ei_impulse_t *impulse,
             smooth->count[smooth->last_readings[ix]]++;
         }
         else if (smooth->last_readings[ix] == -1) { // uncertain
-            smooth->count[impulse->label_count]++;
+            smooth->count[EI_CLASSIFIER_LABEL_COUNT]++;
         }
         else if (smooth->last_readings[ix] == -2) { // anomaly
-            smooth->count[impulse->label_count + 1]++;
+            smooth->count[EI_CLASSIFIER_LABEL_COUNT + 1]++;
         }
     }
 
@@ -111,7 +105,7 @@ const char* ei_classifier_smooth_update(const ei_impulse_t *impulse,
     uint8_t top_count = 0;
     bool met_confidence_threshold = false;
     uint8_t confidence_threshold = smooth->min_readings_same; // XX% of windows should be the same
-    for (size_t ix = 0; ix < impulse->label_count + 2; ix++) {
+    for (size_t ix = 0; ix < EI_CLASSIFIER_LABEL_COUNT + 2; ix++) {
         if (smooth->count[ix] > top_count) {
             top_result = ix;
             top_count = smooth->count[ix];
@@ -122,10 +116,10 @@ const char* ei_classifier_smooth_update(const ei_impulse_t *impulse,
     }
 
     if (met_confidence_threshold) {
-        if (top_result == impulse->label_count) {
+        if (top_result == EI_CLASSIFIER_LABEL_COUNT) {
             return "uncertain";
         }
-        else if (top_result == impulse->label_count + 1) {
+        else if (top_result == EI_CLASSIFIER_LABEL_COUNT + 1) {
             return "anomaly";
         }
         else {
@@ -139,8 +133,9 @@ const char* ei_classifier_smooth_update(const ei_impulse_t *impulse,
  * Clear up a smooth structure
  */
 void ei_classifier_smooth_free(ei_classifier_smooth_t *smooth) {
-    free(smooth->last_readings);
+    ei_free(smooth->last_readings);
 }
 
+#endif // #if EI_CLASSIFIER_OBJECT_DETECTION != 1
 
 #endif // _EI_CLASSIFIER_SMOOTH_H_

@@ -1,11 +1,24 @@
 /****************************************************************************
- * apps/netutils/telnetc/telnetc.c
+ * apps/include/netutils/telnetc.h
  *
- * Leveraged from libtelnet, https://github.com/seanmiddleditch/libtelnet.
- * Modified and re-released under the BSD license:
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.  The
+ * ASF licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the
+ * License.  You may obtain a copy of the License at
  *
- *   Copyright (C) 2017 Gregory Nutt. All rights reserved.
- *   Author: Gregory Nutt <gnutt@nuttx.org>
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ *
+ ****************************************************************************/
+
+/* Leveraged from libtelnet, https://github.com/seanmiddleditch/libtelnet.
  *
  * The original authors of libtelnet are listed below.  Per their licesne,
  * "The author or authors of this code dedicate any and all copyright
@@ -18,48 +31,20 @@
  *   Author: Sean Middleditch <sean@sourcemud.org>
  *   (Also listed in the AUTHORS file are Jack Kelly <endgame.dos@gmail.com>
  *   and Katherine Flavel <kate@elide.org>)
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- *
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in
- *    the documentation and/or other materials provided with the
- *    distribution.
- * 3. Neither the name NuttX nor the names of its contributors may be
- *    used to endorse or promote products derived from this software
- *    without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
- * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
- * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
- * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
- * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
- * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- *
- ****************************************************************************/
+ */
 
 /* libtelnet - TELNET protocol handling library
  *
  * SUMMARY:
  *
  * libtelnet is a library for handling the TELNET protocol.  It includes
- * routines for parsing incoming data from a remote peer as well as formatting
- * data to send to the remote peer.
+ * routines for parsing incoming data from a remote peer as well as
+ * formatting data to send to the remote peer.
  *
  * libtelnet uses a callback-oriented API, allowing application-specific
- * handling of various events.  The callback system is also used for buffering
- * outgoing protocol data, allowing the application to maintain control over
- * the actual socket connection.
+ * handling of various events.  The callback system is also used for
+ * buffering outgoing protocol data, allowing the application to maintain
+ * control over the actual socket connection.
  *
  * Features supported include the full TELNET protocol, Q-method option
  * negotiation, ZMP, MCCP2, MSSP, and NEW-ENVIRON.
@@ -77,15 +62,16 @@
  *
  * The author or authors of this code dedicate any and all copyright interest
  * in this code to the public domain. We make this dedication for the benefit
- * of the public at large and to the detriment of our heirs and successors. We
- * intend this dedication to be an overt act of relinquishment in perpetuity of
- * all present and future rights to this code under copyright law.
+ * of the public at large and to the detriment of our heirs and successors.
+ * We intend this dedication to be an overt act of relinquishment in
+ * perpetuity of all present and future rights to this code under copyright
+ * law.
  *
  *   Author: Sean Middleditch <sean@sourcemud.org>
  */
 
 #ifndef __APPS_INCLUDE_NETUTILS_TELNETC_H
-#define __APPS_INCLUDE_NETUTILS_TELNETC_H 1
+#define __APPS_INCLUDE_NETUTILS_TELNETC_H
 
 /****************************************************************************
  * Included Files
@@ -208,7 +194,7 @@ extern "C"
 
 /* Error codes */
 
-enum telnet_error_u
+enum telnet_error_e
 {
   TELNET_EOK = 0,                         /* No error */
   TELNET_EBADVAL,                         /* Invalid parameter, or API misuse */
@@ -235,8 +221,8 @@ enum telnet_event_type_e
   TELNET_EV_TTYPE,                        /* TTYPE command has been received */
   TELNET_EV_ENVIRON,                      /* ENVIRON command has been received */
   TELNET_EV_MSSP,                         /* MSSP command has been received */
-  TELNET_EV_WARNING,                      /* Recoverable error has occured */
-  TELNET_EV_ERROR                         /* Non-recoverable error has occured */
+  TELNET_EV_WARNING,                      /* Recoverable error has occurred */
+  TELNET_EV_ERROR                         /* Non-recoverable error has occurred */
 };
 
 /* Environ/MSSP command information */
@@ -280,11 +266,11 @@ union telnet_event_u
   struct
   {
     enum telnet_event_type_e _type;       /* Alias for type */
-    const char *file;                     /* File the error occured in */
-    const char *func;                     /* Function the error occured in */
+    const char *file;                     /* File the error occurred in */
+    const char *func;                     /* Function the error occurred in */
     const char *msg;                      /* Error message string */
-    int line;                             /* Line of file error occured on */
-    enum telnet_error_u errcode;          /* Error code */
+    int line;                             /* Line of file error occurred on */
+    enum telnet_error_e errcode;          /* Error code */
   } error;
 
   /* Command event: for IAC */
@@ -305,7 +291,7 @@ union telnet_event_u
 
   /* Subnegotiation event */
 
- struct
+  struct
   {
     enum telnet_event_type_e _type;       /* Alias for type */
     const char *buffer;                   /* Data of sub-negotiation */
@@ -694,8 +680,8 @@ void telnet_newenviron_value(struct telnet_s *telnet, unsigned char type,
  * Description:
  *   Finish a NEW-ENVIRON command.
  *
- *   This must be called after a call to telnet_begin_newenviron() to finish a
- *   NEW-ENVIRON variable list.
+ *   This must be called after a call to telnet_begin_newenviron() to finish
+ *   a NEW-ENVIRON variable list.
  *
  *   telnet Telnet state tracker object.
  *
@@ -732,7 +718,7 @@ void telnet_ttype_send(struct telnet_s * telnet);
  *
  *   The server may continue sending TERMINAL-TYPE IS until it receives a
  *   terminal type is understands.  To indicate to the server that it has
- *   reached the end of the available optoins, the client must send the last
+ *   reached the end of the available options, the client must send the last
  *   terminal type a second time.  When the server receives the same terminal
  *   type twice in a row, it knows it has seen all available terminal types.
  *

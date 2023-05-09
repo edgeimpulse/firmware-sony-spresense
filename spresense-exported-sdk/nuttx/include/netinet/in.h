@@ -1,36 +1,20 @@
 /****************************************************************************
  * include/netinet/in.h
  *
- *   Copyright (C) 2007, 2009-2010, 2017-2018 Gregory Nutt. All rights
- *     reserved.
- *   Author: Gregory Nutt <gnutt@nuttx.org>
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.  The
+ * ASF licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the
+ * License.  You may obtain a copy of the License at
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in
- *    the documentation and/or other materials provided with the
- *    distribution.
- * 3. Neither the name NuttX nor the names of its contributors may be
- *    used to endorse or promote products derived from this software
- *    without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
- * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
- * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
- * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
- * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
- * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
  *
  ****************************************************************************/
 
@@ -103,14 +87,17 @@
                                                     * blocked multicast source */
 #define IP_BLOCK_SOURCE       (__SO_PROTOCOL + 7)  /* Stop receiving multicast
                                                     * data from source */
+
 #define IP_ADD_SOURCE_MEMBERSHIP (__SO_PROTOCOL + 8) /* Join a multicast group;
-                                                    * allow receive only from
-                                                    * source */
+                                                      * allow receive only from
+                                                      * source */
+
 #define IP_DROP_SOURCE_MEMBERSHIP (__SO_PROTOCOL + 9) /* Leave a source-specific
-                                                    * group.  Stop receiving
-                                                    * data from a given
-                                                    * multicast group that come
-                                                    * from a given source */
+                                                       * group.  Stop receiving
+                                                       * data from a given
+                                                       * multicast group that come
+                                                       * from a given source */
+
 #define IP_MSFILTER           (__SO_PROTOCOL + 10) /* Access advanced, full-
                                                     * state filtering API */
 #define IP_MULTICAST_ALL      (__SO_PROTOCOL + 11) /* Modify the delivery policy
@@ -118,6 +105,11 @@
                                                     * to INADDR_ANY */
 #define IP_PKTINFO            (__SO_PROTOCOL + 12) /* Get some information about
                                                     * the incoming packet */
+#define IP_TOS                (__SO_PROTOCOL + 13) /* Access the Type-Of-Service
+                                                    * (TOS) field  */
+#define IP_TTL                (__SO_PROTOCOL + 14) /* The IP TTL (time to live)
+                                                    * of IP packets sent by the
+                                                    * network stack */
 
 /* SOL_IPV6 protocol-level socket options. */
 
@@ -199,6 +191,34 @@
   ((a)->s6_addr32[0] == 0 && \
    (a)->s6_addr32[1] == 0 && \
    (a)->s6_addr32[2] == HTONL(0xffff))
+
+/* This macro to convert a 16/32-bit constant values quantity from host byte
+ * order to network byte order.  The 16-bit version of this macro is required
+ * for uIP:
+ *
+ *   Author Adam Dunkels <adam@dunkels.com>
+ *   Copyright (c) 2001-2003, Adam Dunkels.
+ *   All rights reserved.
+ */
+
+#ifdef CONFIG_ENDIAN_BIG
+# define HTONS(ns) (ns)
+# define HTONL(nl) (nl)
+#else
+# define HTONS(ns) \
+  (unsigned short) \
+    (((((unsigned short)(ns)) & 0x00ff) << 8) | \
+     ((((unsigned short)(ns)) >> 8) & 0x00ff))
+# define HTONL(nl) \
+  (unsigned long) \
+    (((((unsigned long)(nl)) & 0x000000ffUL) << 24) | \
+     ((((unsigned long)(nl)) & 0x0000ff00UL) <<  8) | \
+     ((((unsigned long)(nl)) & 0x00ff0000UL) >>  8) | \
+     ((((unsigned long)(nl)) & 0xff000000UL) >> 24))
+#endif
+
+#define NTOHS(hs) HTONS(hs)
+#define NTOHL(hl) HTONL(hl)
 
 /****************************************************************************
  * Public Type Definitions
@@ -318,6 +338,22 @@ EXTERN const struct in6_addr in6addr_any;
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
+
+/* Functions to convert between host and network byte ordering.
+ *
+ * REVISIT:  Since network order is defined as big-endian, the following
+ * functions are equivalent to functions declared in endian.h:
+ *
+ *   htonl   htobe32
+ *   htons   htobe16
+ *   ntohl   be32toh
+ *   ntohs   be16toh
+ */
+
+uint32_t    ntohl(uint32_t nl);
+uint16_t    ntohs(uint16_t ns);
+uint32_t    htonl(uint32_t hl);
+uint16_t    htons(uint16_t hs);
 
 #undef EXTERN
 #if defined(__cplusplus)

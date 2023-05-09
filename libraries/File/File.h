@@ -38,14 +38,14 @@
  * @details The File library allows for reading from and writing to File
  */
 
-// #include <Arduino.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <stdio.h>
 
-#define FILE_READ O_RDONLY                                     /**< Open the file for reading, starting at the beginning of the file. */
-#define FILE_WRITE (O_RDONLY | O_WRONLY | O_CREAT | O_APPEND)  /**< Open the file for reading and writing, starting at the end of the file.  */
+#define FILE_READ O_RDONLY                         /**< Open the file for reading, starting at the beginning of the file. */
+#define FILE_WRITE (O_RDONLY | O_WRONLY | O_CREAT) /**< Open the file for reading and writing, starting at the end of the file.  */
+#define FILE_DELETE (O_WRONLY | O_TRUNC)
 
 /**
  * @class File
@@ -194,6 +194,8 @@ public:
   * @brief Bring you back to the first file in the directory.
   */
   void rewindDirectory(void);
+
+  void remove(const char *name);
 
   // using Print::write;
 };

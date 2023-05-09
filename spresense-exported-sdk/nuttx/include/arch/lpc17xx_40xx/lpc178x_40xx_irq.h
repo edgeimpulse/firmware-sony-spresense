@@ -1,40 +1,24 @@
 /****************************************************************************
- * arch/arm/include/lpc17xx_40xxx/lpc178x_40xx_irq.h
+ * arch/arm/include/lpc17xx_40xx/lpc178x_40xx_irq.h
  *
- *   Copyright (C) 2013 Gregory Nutt. All rights reserved.
- *   Authors: Rommel Marcelo
- *            Gregory Nutt <gnutt@nuttx.org>
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.  The
+ * ASF licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the
+ * License.  You may obtain a copy of the License at
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in
- *    the documentation and/or other materials provided with the
- *    distribution.
- * 3. Neither the name NuttX nor the names of its contributors may be
- *    used to endorse or promote products derived from this software
- *    without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
- * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
- * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
- * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
- * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
- * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
  *
  ****************************************************************************/
 
-/* This file should never be included directed but, rather,
+/* This file should never be included directly but, rather,
  * only indirectly through nuttx/irq.h
  */
 
@@ -46,7 +30,7 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Pre-processor Definitions
+ * Pre-processor Prototypes
  ****************************************************************************/
 
 /* IRQ numbers.  The IRQ number corresponds vector number and hence map
@@ -156,8 +140,9 @@
 #define LPC17_40_IRQ_NEXTINT       (41)
 #define LPC17_40_IRQ_NIRQS         (LPC17_40_IRQ_EXTINT+LPC17_40_IRQ_NEXTINT)
 
-/* GPIO interrupts.  The LPC177x_8x supports several interrupts on ports 0 and
- * 2 (only).  We go through some special efforts to keep the number of IRQs
+/* GPIO interrupts.
+ * The LPC177x_8x supports several interrupts on ports 0 and 2 (only).
+ * We go through some special efforts to keep the number of IRQs
  * to a minimum in this sparse interrupt case.
  *
  * 31 interrupts on Port 0:  p0.0 - p0.30
@@ -170,7 +155,7 @@
 #  define LPC17_40_VALID_GPIOINT0   (0xfffffffful) /* GPIO port 0 interrupt set */
 #  define LPC17_40_VALID_GPIOINT2   (0xfffffffful) /* GPIO port 2 interrupt set */
 
-   /* Set 1: 16 interrupts p0.0-p0.15 */
+/* Set 1: 16 interrupts p0.0-p0.15 */
 
 #  define LPC17_40_VALID_SHIFT0L    (0)
 #  define LPC17_40_VALID_FIRST0L    (LPC17_40_IRQ_EXTINT+LPC17_40_IRQ_NEXTINT)
@@ -193,7 +178,7 @@
 #  define LPC17_40_IRQ_P0p15        (LPC17_40_VALID_FIRST0L+15)
 #  define LPC17_40_VALID_NIRQS0L    (16)
 
-   /* Set 2: 16 interrupts p0.16-p0.31 */
+/* Set 2: 16 interrupts p0.16-p0.31 */
 
 #  define LPC17_40_VALID_SHIFT0H    (16)
 #  define LPC17_40_VALID_FIRST0H    (LPC17_40_VALID_FIRST0L+LPC17_40_VALID_NIRQS0L)
@@ -216,7 +201,7 @@
 #  define LPC17_40_IRQ_P0p31        (LPC17_40_VALID_FIRST0H+15)
 #  define LPC17_40_VALID_NIRQS0H    (16)
 
-   /* Set 3: 16 interrupts p2.0-p2.15 */
+/* Set 3: 16 interrupts p2.0-p2.15 */
 
 #  define LPC17_40_VALID_SHIFT2L    (0)
 #  define LPC17_40_VALID_FIRST2L    (LPC17_40_VALID_FIRST0H+LPC17_40_VALID_NIRQS0H)
@@ -239,7 +224,7 @@
 #  define LPC17_40_IRQ_P2p15        (LPC17_40_VALID_FIRST2L+15)
 #  define LPC17_40_VALID_NIRQS2L    (16)
 
-   /* Set 4: 16 interrupts p2.16 - p2.31 */
+/* Set 4: 16 interrupts p2.16 - p2.31 */
 
 #  define LPC17_40_VALID_SHIFT2H    (16)
 #  define LPC17_40_VALID_FIRST2H    (LPC17_40_VALID_FIRST2L+LPC17_40_VALID_NIRQS2L)
@@ -288,4 +273,3 @@
  ****************************************************************************/
 
 #endif /* __ARCH_ARM_INCLUDE_LPC17XX_40XX_LPC178X_IRQ_H */
-

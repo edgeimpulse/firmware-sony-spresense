@@ -50,7 +50,7 @@ char KX126::init(void)
     return (rc);
   }
 
-  for(simple_delay = 0; simple_delay < 0xFFFFF; simple_delay++){};
+  ei_sleep(100);
 
   rc = read(KX126_WHO_AM_I, &reg, sizeof(reg));
   if (rc != 0) {

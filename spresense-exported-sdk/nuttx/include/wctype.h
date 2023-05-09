@@ -1,35 +1,20 @@
 /****************************************************************************
  * include/wctype.h
  *
- *   Copyright (C) 2016 Gregory Nutt. All rights reserved.
- *   Author: Gregory Nutt <gnutt@nuttx.org>
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.  The
+ * ASF licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the
+ * License.  You may obtain a copy of the License at
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in
- *    the documentation and/or other materials provided with the
- *    distribution.
- * 3. Neither the name NuttX nor the names of its contributors may be
- *    used to endorse or promote products derived from this software
- *    without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
- * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
- * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
- * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
- * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
- * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
  *
  ****************************************************************************/
 
@@ -66,6 +51,25 @@
 #define WC_SPACE        10
 #define WC_UPPER        11
 #define WC_XDIGIT       12
+
+#define iswalnum_l(c, l)     iswalnum(c)
+#define iswalpha_l(c, l)     iswalpha(c)
+#define iswblank_l(c, l)     iswblank(c)
+#define iswcntrl_l(c, l)     iswcntrl(c)
+#define iswdigit_l(c, l)     iswdigit(c)
+#define iswgraph_l(c, l)     iswgraph(c)
+#define iswlower_l(c, l)     iswlower(c)
+#define iswprint_l(c, l)     iswprint(c)
+#define iswpunct_l(c, l)     iswpunct(c)
+#define iswspace_l(c, l)     iswspace(c)
+#define iswupper_l(c, l)     iswupper(c)
+#define iswxdigit_l(c, l)    iswxdigit(c)
+#define iswctype_l(c, d, l)  iswctype(c, d)
+#define towlower_l(c, l)     towlower(c)
+#define towupper_l(c, l)     towupper(c)
+#define towctrans_l(c, d, l) towctrans(c, d)
+#define wctrans_l(p, l)      wctrans(p)
+#define wctype_l(p, l)       wctype(p)
 
 /****************************************************************************
  * Public Types
@@ -113,7 +117,6 @@ int               towctrans(wint_t, wctrans_t);
 wint_t            towlower(wint_t);
 wint_t            towupper(wint_t);
 wctrans_t         wctrans(FAR const char *);
-int               iswctype(wint_t, wctype_t);
 wctype_t          wctype(FAR const char *);
 
 #undef EXTERN

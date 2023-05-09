@@ -1,35 +1,20 @@
 /****************************************************************************
- * modules/include/video/video.h
+ * include/nuttx/video/video.h
  *
- *   Copyright 2018 Sony Semiconductor Solutions Corporation
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.  The
+ * ASF licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the
+ * License.  You may obtain a copy of the License at
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in
- *    the documentation and/or other materials provided with the
- *    distribution.
- * 3. Neither the name of Sony Semiconductor Solutions Corporation nor
- *    the names of its contributors may be used to endorse or promote
- *    products derived from this software without specific prior written
- *    permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
- * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
- * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
- * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
- * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
- * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
  *
  ****************************************************************************/
 
@@ -187,6 +172,30 @@ extern "C"
 
 #define V4SIOC_S_EXT_CTRLS_SCENE      _VIDIOC(0x001a)
 
+/* Query device capability
+ * Address pointing to struct v4l2_capability
+ */
+
+#define VIDIOC_QUERYCAP               _VIDIOC(0x001b)
+
+/* Set clip
+ * Address pointing to struct v4l2_selection
+ */
+
+#define VIDIOC_S_SELECTION            _VIDIOC(0x001c)
+
+/* Get clip
+ * Address pointing to struct v4l2_selection
+ */
+
+#define VIDIOC_G_SELECTION            _VIDIOC(0x001d)
+
+/* Get the frame interval.
+ * Address pointing to struct v4l2_streamparm
+ */
+
+#define VIDIOC_G_PARM                 _VIDIOC(0x001e)
+
 #define VIDEO_HSIZE_QVGA        (320)   /* QVGA    horizontal size */
 #define VIDEO_VSIZE_QVGA        (240)   /* QVGA    vertical   size */
 #define VIDEO_HSIZE_VGA         (640)   /* VGA     horizontal size */
@@ -215,7 +224,7 @@ extern "C"
 
 /* RGB565 */
 
-#define V4L2_PIX_FMT_RGB565 v4l2_fourcc('R', 'G', 'B', 'P') 
+#define V4L2_PIX_FMT_RGB565 v4l2_fourcc('R', 'G', 'B', 'P')
 
 /* JFIF JPEG */
 
@@ -224,6 +233,14 @@ extern "C"
 /* JPEG + sub image */
 
 #define V4L2_PIX_FMT_JPEG_WITH_SUBIMG v4l2_fourcc('J', 'S', 'U', 'B')
+
+/* YUV 4:2:2 for sub image */
+
+#define V4L2_PIX_FMT_SUBIMG_UYVY v4l2_fourcc('S', 'Y', 'U', 'V')
+
+/* RGB565 for sub image */
+
+#define V4L2_PIX_FMT_SUBIMG_RGB565 v4l2_fourcc('S', 'R', 'G', 'B')
 
 /* MAX length of v4l2_fmtdesc description string */
 
@@ -244,6 +261,54 @@ extern "C"
 /****************************************************************************
  * Public Types
  ****************************************************************************/
+
+/* V4L2 device capabilities for VIDIOC_QUERYCAP.
+ * Currently, only member "driver" is supported.
+ */
+
+struct v4l2_capability
+{
+  uint8_t  driver[16];   /* name of driver module(e.g. "bttv" */
+  uint8_t  card[32];     /* name of the card(e.g. "Yoyodyne TV/FM" */
+  uint8_t  bus_info[32]; /* name of the bus(e.g. "PCI:0000:05:06.0" */
+  uint32_t version;      /* version number of the driver */
+  uint32_t capabilities; /* Available capabilities of the physical device */
+  uint32_t device_caps;  /* Device capabilities of the opened device */
+};
+
+/* Rectangle information */
+
+struct v4l2_rect
+{
+  /* Horizontal offset of the top, left corner of the rectangle, in pixels. */
+
+  int32_t left;
+
+  /* Vertical offset of the top, left corner of the rectangle, in pixels. */
+
+  int32_t top;
+
+  /* Width of the rectangle, in pixels. */
+
+  uint32_t width;
+
+  /* Height of the rectangle, in pixels. */
+
+  uint32_t height;
+};
+
+/* V4L2 selection info for VIDIOC_S_SELECTION and VIDIOC_G_SELECTION.
+ * Currently, only member type and r are supported.
+ */
+
+struct v4l2_selection
+{
+  uint32_t type;       /* Buffer type */
+  uint32_t target;
+  uint32_t flags;
+  struct v4l2_rect r;  /* The selection rectangle. */
+};
+
 /* Buffer type.
  *  Currently, support only V4L2_BUF_TYPE_VIDEO_CAPTURE and
  *  V4L2_BUF_TYPE_STILL_CAPTURE.
@@ -379,14 +444,13 @@ struct v4l2_fmtdesc
   uint32_t flags;
   char     description[V4L2_FMT_DSC_MAX];   /* Description string */
   uint32_t pixelformat;                     /* Format fourcc      */
-  uint32_t subimg_pixelformat;              /* Format fourcc      */
 };
 
 enum v4l2_frmsizetypes
 {
-  V4L2_FRMSIZE_TYPE_DISCRETE      = 1,   /* Discrete value */
-  V4L2_FRMSIZE_TYPE_CONTINUOUS    = 2,   /* Continous value */
-  V4L2_FRMSIZE_TYPE_STEPWISE      = 3,   /* Step value */
+  V4L2_FRMSIZE_TYPE_DISCRETE      = 1,   /* Discrete value   */
+  V4L2_FRMSIZE_TYPE_CONTINUOUS    = 2,   /* Continuous value */
+  V4L2_FRMSIZE_TYPE_STEPWISE      = 3,   /* Step value       */
 };
 
 struct v4l2_frmsize_discrete
@@ -411,33 +475,16 @@ struct v4l2_frmsizeenum
   uint32_t  buf_type;           /* enum #v4l2_buf_type */
   uint32_t  pixel_format;       /* Pixel format */
   uint32_t  type;               /* Frame size type the device supports. */
-  union
-  {                             /* Frame size */
-    struct v4l2_frmsize_discrete discrete; /* Use in type =
-                                            *    V4L2_FRMSIZE_TYPE_DISCRETE
-                                            *    case
-                                            */
-    struct v4l2_frmsize_stepwise stepwise; /* Use in type =
-                                            *    V4L2_FRMSIZE_TYPE_CONTINUOUS
-                                            *    or V4L2_FRMSIZE_TYPE_STEPWISE
-                                            *    case
-                                            */
-  };
-  uint32_t  subimg_pixel_format; /* Pixel format of sub image */
-  uint32_t  subimg_type;         /* Frame size type of subimage. */
+
+  /* In type == V4L2_FRMSIZE_TYPE_DISCRETE case, use discrete.
+   * Otherwise, use stepwise.
+   */
 
   union
-    {                            /* Frame size of subimage */
-    struct v4l2_frmsize_discrete discrete; /* Use in subimg_type =
-                                            *    V4L2_FRMSIZE_TYPE_DISCRETE
-                                            *    case
-                                            */
-    struct v4l2_frmsize_stepwise stepwise; /* Use in subimg_type =
-                                            *    V4L2_FRMSIZE_TYPE_CONTINUOUS
-                                            *    or V4L2_FRMSIZE_TYPE_STEPWISE
-                                            *    case
-                                            */
-    } subimg;
+  {
+    struct v4l2_frmsize_discrete discrete;
+    struct v4l2_frmsize_stepwise stepwise;
+  };
 };
 
 /* type of frame interval enumeration */
@@ -473,9 +520,6 @@ struct v4l2_frmivalenum
   uint32_t pixel_format;        /* Pixel format */
   uint16_t width;               /* Frame width */
   uint16_t height;              /* Frame height */
-  uint32_t subimg_pixel_format; /* Pixel format for sub image */
-  uint16_t subimg_width;        /* Frame width  for sub image */
-  uint16_t subimg_height;       /* Frame height for sub image */
   uint32_t type;                /* Frame interval type */
   union
   {                             /* Frame interval */
@@ -491,9 +535,6 @@ struct v4l2_pix_format
   uint16_t  width;              /* Image width in pixels */
   uint16_t  height;             /* Image height in pixels */
   uint32_t  pixelformat;        /* The pixel format  or type of compression. */
-  uint16_t  subimg_width;       /* sub image width in pixels in case of pixelformat = V4L2_PIX_FMT_JPEG_WITH_SUBIMG */
-  uint16_t  subimg_height;      /* sub image height in pixels in case of pixelformat = V4L2_PIX_FMT_JPEG_WITH_SUBIMG */
-  uint32_t  subimg_pixelformat; /* The pixel format of sub image in case of pixelformat = V4L2_PIX_FMT_JPEG_WITH_SUBIMG */
   uint32_t  field;              /* enum #v4l2_field */
   uint32_t  bytesperline;       /* for padding, zero if unused */
   uint32_t  sizeimage;          /* Size in bytes of the buffer to hold a complete image */
@@ -602,7 +643,7 @@ struct v4l2_querymenu
     char    name[32];       /* name of menu  */
     int64_t value;          /* value of menu */
   };
-} __attribute__ ((packed));
+};
 
 struct v4l2_control
 {
@@ -628,18 +669,18 @@ struct v4l2_ext_control
     uint32_t *p_u32;   /* QUERY_EXT_CTRL type = U32 */
     void     *ptr;
   };
-} __attribute__ ((packed));
+};
 
 struct v4l2_ext_controls
 {
   union
   {
-    uint16_t              ctrl_class;  /* camera control class        */
+    uint16_t              ctrl_class;  /* camera control class         */
     uint16_t              which;
   };
-  uint16_t                count;       /* number of requests          */
-  uint16_t                error_idx;   /* index in that error occured */
-  struct v4l2_ext_control *controls;   /* each control information    */
+  uint16_t                count;       /* number of requests           */
+  uint16_t                error_idx;   /* index in that error occurred */
+  struct v4l2_ext_control *controls;   /* each control information     */
 };
 
 /* Structure for V4SIOC_S_EXT_CTRLS and V4SIOC_G_EXT_CTRLS */
@@ -665,9 +706,6 @@ struct v4s_querymenu_scene
   enum v4l2_scene_mode       mode;     /* scene mode to be queried */
   struct v4l2_querymenu      menu;     /* same as VIDIOC_QUERYMENU */
 };
-
-extern FAR const struct video_sensctrl_ops_s *g_video_sensctrl_ops;
-extern FAR const struct video_imgdata_ops_s  *g_video_imgdata_ops;
 
 /****************************************************************************
  * Public Function Prototypes

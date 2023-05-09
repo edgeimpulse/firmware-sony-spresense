@@ -1,13 +1,6 @@
 /****************************************************************************
  * include/nuttx/mtd/nand_raw.h
  *
- *   Copyright (C) 2013 Gregory Nutt. All rights reserved.
- *   Author: Gregory Nutt <gnutt@nuttx.org>
- *
- * This logic was based largely on Atmel sample code with modifications for
- * better integration with NuttX.  The Atmel sample code has a BSD
- * compatibile license that requires this copyright notice:
- *
  *   Copyright (c) 2012, Atmel Corporation
  *
  * Redistribution and use in source and binary forms, with or without
@@ -58,6 +51,7 @@
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
+
 /* Nand flash commands */
 
 #define COMMAND_READ_1                  0x00
@@ -133,7 +127,7 @@
  *   block  - Number of the physical block to erase.
  *
  * Returned Value:
- *   OK is returned in succes; a negated errno value is returned on failure.
+ *   OK is returned in success; a negated errno value is returned on failure.
  *
  ****************************************************************************/
 
@@ -154,7 +148,7 @@
  *   spare - Buffer where the spare area will be stored.
  *
  * Returned Value:
- *   OK is returned in succes; a negated errno value is returned on failure.
+ *   OK is returned in success; a negated errno value is returned on failure.
  *
  ****************************************************************************/
 
@@ -171,11 +165,11 @@
  *   raw   - Lower-half, raw NAND FLASH interface
  *   block - Number of the block where the page to write resides.
  *   page  - Number of the page to write inside the given block.
- *   data  - Buffer containing the data to be writting
+ *   data  - Buffer containing the data to be writing
  *   spare - Buffer containing the spare data to be written.
  *
  * Returned Value:
- *   OK is returned in succes; a negated errno value is returned on failure.
+ *   OK is returned in success; a negated errno value is returned on failure.
  *
  ****************************************************************************/
 
@@ -197,7 +191,7 @@
  *   spare - Buffer where the spare area will be stored.
  *
  * Returned Value:
- *   OK is returned in succes; a negated errno value is returned on failure.
+ *   OK is returned in success; a negated errno value is returned on failure.
  *
  ****************************************************************************/
 
@@ -218,11 +212,11 @@
  *   raw   - Lower-half, raw NAND FLASH interface
  *   block - Number of the block where the page to write resides.
  *   page  - Number of the page to write inside the given block.
- *   data  - Buffer containing the data to be writting
+ *   data  - Buffer containing the data to be writing
  *   spare - Buffer containing the spare data to be written.
  *
  * Returned Value:
- *   OK is returned in succes; a negated errno value is returned on failure.
+ *   OK is returned in success; a negated errno value is returned on failure.
  *
  ****************************************************************************/
 
@@ -269,7 +263,7 @@ struct nand_raw_s
 #endif
 
 #if defined(CONFIG_MTD_NAND_SWECC) || defined(CONFIG_MTD_NAND_HWECC)
-  /* ECC working buffers*/
+  /* ECC working buffers */
 
   uint8_t spare[CONFIG_MTD_NAND_MAXPAGESPARESIZE];
   uint8_t ecc[CONFIG_MTD_NAND_MAXSPAREECCBYTES];

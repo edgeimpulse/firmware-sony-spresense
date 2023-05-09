@@ -1,35 +1,20 @@
 /****************************************************************************
- * apps/include/system/ftpc.h
+ * apps/include/netutils/ftpc.h
  *
- *   Copyright (C) 2011, 2015-2016 Gregory Nutt. All rights reserved.
- *   Author: Gregory Nutt <gnutt@nuttx.org>
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.  The
+ * ASF licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the
+ * License.  You may obtain a copy of the License at
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in
- *    the documentation and/or other materials provided with the
- *    distribution.
- * 3. Neither the name NuttX nor the names of its contributors may be
- *    used to endorse or promote products derived from this software
- *    without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
- * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
- * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
- * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
- * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
- * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
  *
  ****************************************************************************/
 
@@ -53,6 +38,7 @@
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
+
 /* Configuration ************************************************************/
 
 #ifndef CONFIG_FTP_DEFTIMEO
@@ -88,6 +74,7 @@
 #endif
 
 /* Interface arguments ******************************************************/
+
 /* These definitions describe how a put operation should be performed */
 
 #define FTPC_PUT_NORMAL      0  /* Just PUT the file on the server */
@@ -110,18 +97,15 @@
 /****************************************************************************
  * Public Types
  ****************************************************************************/
+
 /* This "handle" describes the FTP session */
 
 typedef FAR void *SESSION;
 
-/* This union provides information to connect to a host FTP server.
+/* This union provides socket address to connect to a host FTP server.
  *
- * addr - The IPv4 or IPv6 address of the FTP server (or the proxy) for the FTP
- *        server.
- * port - The port number on the FTP server to connect to (in host byte
- *        order).  This is usually port 21 for FTP.  You may set this
- *        value to zero to let FTPC select the default port number for
- *        you (it will use CONFIG_FTP_DEFPORT).
+ * in4, in6 - The IPv4 or IPv6 address of the FTP server (or the proxy)
+ *            for the FTP server.
  */
 
 union ftpc_sockaddr_u
@@ -149,7 +133,7 @@ struct ftpc_login_s
 
 /* This structure describes one simple directory listing.  The directory
  * list container as well the individual filename strings are allocated.
- * The number of names in tha actual allocated array is variable, given
+ * The number of names in the actual allocated array is variable, given
  * by the nnames field.
  *
  * Since the structure and file names are allocated, they must be freed
@@ -181,8 +165,9 @@ extern "C"
 #endif
 
 /****************************************************************************
- * Public Functions
+ * Public Function Prototypes
  ****************************************************************************/
+
 /* Connection management ****************************************************/
 
 SESSION ftpc_connect(FAR union ftpc_sockaddr_u *server);
@@ -201,7 +186,8 @@ int ftpc_rmdir(SESSION handle, FAR const char *path);
 
 int ftpc_unlink(SESSION handle, FAR const char *path);
 int ftpc_chmod(SESSION handle, FAR const char *path, FAR const char *mode);
-int ftpc_rename(SESSION handle, FAR const char *oldname, FAR const char *newname);
+int ftpc_rename(SESSION handle, FAR const char *oldname,
+                FAR const char *newname);
 off_t ftpc_filesize(SESSION handle, FAR const char *path);
 time_t ftpc_filetime(SESSION handle, FAR const char *filename);
 

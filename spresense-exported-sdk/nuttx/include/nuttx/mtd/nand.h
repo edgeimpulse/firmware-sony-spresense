@@ -1,13 +1,6 @@
 /****************************************************************************
  * include/nuttx/mtd/nand.h
  *
- *   Copyright (C) 2013 Gregory Nutt. All rights reserved.
- *   Author: Gregory Nutt <gnutt@nuttx.org>
- *
- * This logic was based largely on Atmel sample code with modifications for
- * better integration with NuttX.  The Atmel sample code has a BSD
- * compatibile license that requires this copyright notice:
- *
  *   Copyright (c) 2012, Atmel Corporation
  *
  * Redistribution and use in source and binary forms, with or without
@@ -62,6 +55,7 @@
 /****************************************************************************
  * Public Types
  ****************************************************************************/
+
 /* This type represents the state of the upper-half NAND MTD device.  The
  * struct mtd_dev_s must appear at the beginning of the definition so that
  * you can freely cast between pointers to struct mtd_dev_s and struct

@@ -1,60 +1,45 @@
 /****************************************************************************
  * include/nuttx/sensors/mpu60x0.h
  *
- * Support for the Invensense MPU6000 and MPU6050 MotionTracking(tm)
- * 6-axis accelerometer and gyroscope.
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.  The
+ * ASF licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the
+ * License.  You may obtain a copy of the License at
  *
- *   Copyright (C) 2019 Bill Gatliff. All rights reserved.
- *   Author: Bill Gatliff <bgat@billgatliff.com>
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
  *
- * 1. Redistributions of source code must retain the above copyright+
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in
- *    the documentation and/or other materials provided with the
- *    distribution.
- * 3. Neither the name NuttX nor the names of its contributors may be
- *    used to endorse or promote products derived from this software
- *    without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
- * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
- * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
- * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
- * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
- * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- *
- *****************************************************************************/
+ ****************************************************************************/
 
 #ifndef __INCLUDE_NUTTX_SENSORS_MPU60X0_H
 #define __INCLUDE_NUTTX_SENSORS_MPU60X0_H
 
 /****************************************************************************
  * Included Files
- *****************************************************************************/
+ ****************************************************************************/
 
 #include <nuttx/config.h>
 
 /****************************************************************************
  * Public Types
- *****************************************************************************/
+ ****************************************************************************/
 
-/* These structures are defined elsewhere, and we don't need their definitions
- * here.
+/* These structures are defined elsewhere, and we don't need their
+ * definitions here.
  */
 
+#ifdef CONFIG_MPU60X0_SPI
 struct spi_dev_s;
+#else
 struct i2c_master_s;
+#endif
 
 /* Specifies the initial chip configuration and location.
  *
@@ -79,7 +64,7 @@ struct i2c_master_s;
  * Or, if using dynamic memory allocation and I2C:
  *
  *    struct mpu_config_s* mpuc;
- *    mpuc = malloc(sizeof(*mpuc));
+ *    mpuc = kmm_malloc(sizeof(*mpuc));
  *    memset(mpuc, 0, sizeof(*mpuc)); * sets spi to NULL, if present *
  *    mpuc.i2c = ...;
  *
@@ -88,12 +73,11 @@ struct i2c_master_s;
  * them to disable or enable the unused interface type without
  * changing their code.
  *
- * Note, I2C support is unimplemented at present.
  */
 
 struct mpu_config_s
 {
-#ifdef CONFIG_SPI
+#ifdef CONFIG_MPU60X0_SPI
   /* For users on SPI.
    *
    *  spi_devid : the SPI master's slave-select number
@@ -101,14 +85,17 @@ struct mpu_config_s
    *  spi       : the SPI master device, as used in SPI_SELECT(spi, ..., ...)
    */
 
-   FAR struct spi_dev_s *spi;
-   int spi_devid;
-#endif
+  FAR struct spi_dev_s *spi;
+  int spi_devid;
+#else
+  /* For users on I2C.
+   *
+   *  i2c  : the I2C master device
+   *  addr : the I2C address.
+   */
 
-#ifdef CONFIG_I2C
-    /* For users on I2C. (Unimplemented.) */
-
-    FAR struct i2c_master_s *i2c;
+  FAR struct i2c_master_s *i2c;
+  int addr;
 #endif
   };
 

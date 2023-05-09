@@ -1,99 +1,65 @@
-/* Edge Impulse ingestion SDK
- * Copyright (c) 2021 EdgeImpulse Inc.
+/*
+ * Copyright (c) 2022 EdgeImpulse Inc.
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
  */
 
 #ifndef EI_DEVICE_SONY_SPRESENSE
 #define EI_DEVICE_SONY_SPRESENSE
 
-/* Include ----------------------------------------------------------------- */
 #include "firmware-sdk/ei_device_info_lib.h"
-#include "firmware-sdk/ei_device_interface.h"
-#include "ei_device_sony_spresense_config.h"
+#include "firmware-sdk/ei_device_memory.h"
+#include "ei_camera_driver_sony.h"
+#include "firmware-sdk/ei_fusion.h"
 
-
-#define CONSOLE_BASE    CXD56_UART1_BASE
-
-/** Number of sensors used */
-#define EI_DEVICE_N_SENSORS 2
-
-#define EI_RESOLUTIONS_BASE 4
-#if defined(EI_CLASSIFIER_SENSOR) && EI_CLASSIFIER_SENSOR == EI_CLASSIFIER_SENSOR_CAMERA
-#define EI_DEVICE_N_RESOLUTIONS     EI_RESOLUTIONS_BASE+1
-#else
-#define EI_DEVICE_N_RESOLUTIONS     EI_RESOLUTIONS_BASE
-#endif
-
-#define EI_DEVICE_N_RESIZE_RESOLUTIONS      4
-
-
-/** C Callback types */
-typedef int (*c_callback)(uint8_t out_buffer[32], size_t *out_size);
-typedef int (*c_callback_set_id)(char *device_id);
-typedef bool (*c_callback_status)(void);
-typedef bool (*c_callback_read_sample_buffer)(
-    size_t begin,
-    size_t length,
-    void (*data_fn)(uint8_t *, size_t));
-
-/**
- * @brief      Class description and implementation of device specific
- * 			   characteristics
- */
 class EiDeviceSonySpresense : public EiDeviceInfo {
 private:
-    ei_device_sensor_t sensors[EI_DEVICE_N_SENSORS];
-    ei_device_snapshot_resolutions_t snapshot_resolutions[EI_DEVICE_N_RESOLUTIONS];
+    EiDeviceSonySpresense() = delete;
+    static const int sensors_count = 1;
+    ei_device_sensor_t sensors[sensors_count];
+    EiState state;
+    EiCameraSony* camera;
+    bool is_sampling;
+    float sample_interval_ms;
+    
 public:
-    EiDeviceSonySpresense(void);
+    EiDeviceSonySpresense(EiDeviceMemory *mem);
+    ~EiDeviceSonySpresense();
+    void init_device_id(void);
+    void clear_config(void);
+    uint32_t get_data_output_baudrate(void) override;
+    void set_max_data_output_baudrate(void) override;
+    void set_default_data_output_baudrate(void) override;
+    
+    void set_state(EiState state) override;
+    EiState get_state(void);
 
-    int get_id(uint8_t out_buffer[32], size_t *out_size);
-    const char *get_id_pointer(void);
-    int set_id(char *device_id);
-    int get_type(uint8_t out_buffer[32], size_t *out_size);
-    const char *get_type_pointer(void);
-    bool get_wifi_connection_status(void);
-    bool get_wifi_present_status();
-    bool get_sensor_list(const ei_device_sensor_t **sensor_list, size_t *sensor_list_size);
-    bool get_snapshot_list(const ei_device_snapshot_resolutions_t **resolution_list, size_t *resolution_list_size,
-                        const char **color_depth);
-    void delay_ms(uint32_t milliseconds);
-    void setup_led_control(void);
-    void set_state(EiState state);
-	int get_data_output_baudrate(ei_device_data_output_baudrate_t *baudrate);
-	void set_default_data_output_baudrate() override;
-	void set_max_data_output_baudrate() override;
-    void init_device_id(void) override;
+    bool is_camera_present(void);
+    EiSnapshotProperties get_snapshot_list(void);
 
-    c_callback get_id_function(void);
-	c_callback_set_id set_id_function(void);
-    c_callback get_type_function(void);
-    c_callback_status get_wifi_connection_status_function(void);
-    c_callback_status get_wifi_present_status_function(void);
-    c_callback_read_sample_buffer get_read_sample_buffer_function(void);
+    bool get_sensor_list(const ei_device_sensor_t **sensor_list, size_t *sensor_list_size) override;
+
+    bool start_sample_thread(void (*sample_read_cb)(void), float sample_interval_ms) override;
+    bool stop_sample_thread(void) override;
+
+    bool stop_stream(void);
+    void (*sample_read_callback)(void);
+
+    bool get_is_sampling(void) {
+        return is_sampling;
+    }
 };
 
-/* Reference to object for external usage ---------------------------------- */
-extern EiDeviceSonySpresense EiDevice;
+unsigned int local_sample_thread(void);
 
-void set_max_data_output_baudrate_c();
-void set_default_data_output_baudrate_c();
-
-#endif
+#endif /* EI_DEVICE_TEMPLATE_H_ */

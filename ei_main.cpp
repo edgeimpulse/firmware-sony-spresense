@@ -25,59 +25,62 @@
 #include <cstdio>
 #include <string.h>
 #include "stdlib_missing.h"
-#include "ei_run_impulse.h"
 #include "ei_device_sony_spresense.h"
-#include "ei_sony_spresense_fs_commands.h"
-#include "numpy.hpp"
-#include "firmware-sdk/ei_image_lib.h"
-#include "at_cmds.h"
+#include "ei_at_handlers.h"
+#include "ei_inertialsensor.h"
+#include "ei_run_impulse.h"
+#include "edge-impulse-sdk/porting/ei_classifier_porting.h"
+#include "ei_board.h"
+#include "inference/ei_run_impulse.h"
+#include "ei_camera_driver_sony.h"
 
 /**
  * @brief Init sensors, load config and run command handler
  * 
  * @return int 
  */
-int ei_main() {
+int ei_main(void) 
+{
+    EiDeviceSonySpresense* dev = static_cast<EiDeviceSonySpresense*>(EiDeviceInfo::get_device());
+    EiCameraSony* cam = static_cast<EiCameraSony*>(EiCamera::get_camera());
+    ATServer *at;
+    char data = 0xFF;
 
-    ei_printf("Hello from Edge Impulse Device SDK.\r\n"
-        "Compiled on %s %s\r\n", __DATE__, __TIME__);
+    ei_printf("Hello from Edge Impulse Device SDK.\n"
+        "Compiled on %s %s\n", __DATE__, __TIME__);
 
+    at = ei_at_init(dev);
+    ei_printf("Type AT+HELP to see a list of commands.\n");    
+    at->print_prompt();
+
+    ei_inertial_init();
+    
     /* Intialize configuration */
-    static ei_config_ctx_t config_ctx = {0};
-    config_ctx.get_device_id = EiDevice.get_id_function();
-    config_ctx.set_device_id = EiDevice.set_id_function();
-    config_ctx.get_device_type = EiDevice.get_type_function();
-    config_ctx.wifi_connection_status = EiDevice.get_wifi_connection_status_function();
-    config_ctx.wifi_present = EiDevice.get_wifi_present_status_function();
-    config_ctx.load_config = &ei_sony_spresense_fs_load_config;
-    config_ctx.save_config = &ei_sony_spresense_fs_save_config;
-    config_ctx.list_files = NULL;
-    config_ctx.read_buffer = EiDevice.get_read_sample_buffer_function();
-    config_ctx.take_snapshot = &ei_camera_take_snapshot_output_on_serial;
-    config_ctx.start_snapshot_stream = &ei_camera_start_snapshot_stream;
-
-    EI_CONFIG_ERROR cr = ei_config_init(&config_ctx);
-
-    if (cr != EI_CONFIG_OK) {
-        ei_printf("Failed to initialize configuration (%d)\n", cr);
-    } else {
-        ei_printf("Loaded configuration\n");
-    }
-
-    /* Setup the command line commands */
-    ei_at_register_generic_cmds();
-    ei_at_cmd_register("RUNIMPULSE", "Run the impulse", run_nn_normal);
-    ei_at_cmd_register("RUNIMPULSECONT", "Run the impulse", run_nn_continuous_normal);
-    ei_at_cmd_register("RUNIMPULSEDEBUG=", "Run the impulse with extra (base64) debug output (USEMAXRATE?(y/n))", run_nn_debug);
-    ei_printf("Type AT+HELP to see a list of commands.\r\n> ");
-
-    EiDevice.set_state(eiStateFinished);
-
     while (1) {
-        ei_command_line_handle();
-    }
-}
+        data = spresense_getchar();
 
-extern void set_id(char* id) {
-     EiDevice.set_id(id);
+        if (data != 0) {
+            if (is_inference_running() && data == 'b') {
+                ei_stop_impulse();
+                at->print_prompt();
+                continue;
+            }
+
+            if(cam->is_ingestion_stream_active() && data =='b') {
+                dev->stop_stream();
+                at->print_prompt();
+                continue;
+            }
+
+            at->handle(data);
+        }
+
+        if (cam->is_ingestion_stream_active()) {
+            cam->run_stream();
+        }
+
+        if (is_inference_running() == true) {
+            ei_run_impulse();
+        }
+    }
 }

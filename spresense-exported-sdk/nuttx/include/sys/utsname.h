@@ -46,17 +46,18 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define SYS_NAMELEN      16
+#define SYS_NAMELEN      21
 #define VERSION_NAMELEN  41
 
 /****************************************************************************
  * Public Types
  ****************************************************************************/
+
 /* These are the values returned by uname:
  *
  * FIELD       Default
  * sysname     NuttX
- * nodename    CONFIG_LIB_HOSTNAME
+ * nodename    CONFIG_LIBC_HOSTNAME
  * release     From version.h
  * version     From version.h
  * machine     CONFIG_ARCH

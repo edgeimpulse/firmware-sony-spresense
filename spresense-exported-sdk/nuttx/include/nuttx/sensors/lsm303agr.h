@@ -1,35 +1,20 @@
 /****************************************************************************
- * include/nuttx/sensors/lsm303agr.h [from the IKS01A2 MEMS board STM]
+ * include/nuttx/sensors/lsm303agr.h
  *
- *   Copyright (C) 2016 Omni Hoverboards Inc. All rights reserved.
- *   Author: Paul Alexander Patience <paul-a.patience@polymtl.ca>
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.  The
+ * ASF licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the
+ * License.  You may obtain a copy of the License at
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in
- *    the documentation and/or other materials provided with the
- *    distribution.
- * 3. Neither the name NuttX nor the names of its contributors may be
- *    used to endorse or promote products derived from this software
- *    without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
- * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
- * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
- * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
- * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
- * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
  *
  ****************************************************************************/
 
@@ -55,11 +40,11 @@
 
 /* Accelerometer addresses */
 
-#define LSM303AGRACCELERO_ADDR  (0x32>>1)
+#define LSM303AGRACCELERO_ADDR  (0x32 >> 1)
 
 /* Magnetometer addresses */
 
-#define LSM303AGRMAGNETO_ADDR  (0x3C>>1) /* 7-bit */
+#define LSM303AGRMAGNETO_ADDR  (0x3C >> 1) /* 7-bit */
 
 /* Register Addresses *******************************************************/
 
@@ -93,7 +78,7 @@
 #define LSM303AGR_OUT_Z_L_A                               0x2C
 #define LSM303AGR_OUT_Z_H_A                               0x2D
 
-#define LSM303AGR_OUTX_L_A_SHIFT                          0 
+#define LSM303AGR_OUTX_L_A_SHIFT                          0
 #define LSM303AGR_OUTX_L_A_MASK                           (255 << LSM303AGR_OUTX_L_A_SHIFT)
 
 #define LSM303AGR_FIFO_CTRL_REG_A                         0x2E
@@ -142,7 +127,7 @@
 #define LSM303AGR_OUTZ_L_REG_M                            0x6C
 #define LSM303AGR_OUTZ_H_REG_M                            0x6D
 
-#define LSM303AGR_OUTX_L_M_SHIFT                          0 
+#define LSM303AGR_OUTX_L_M_SHIFT                          0
 #define LSM303AGR_OUTX_L_M_MASK                           (255 << LSM303AGR_OUTX_L_M_SHIFT)
 
 /****************************************************************************
@@ -166,7 +151,7 @@ struct lsm303agr_sensor_data_s
 };
 
 /****************************************************************************
- * Private Types
+ * Public Types
  ****************************************************************************/
 
 struct lsm303agr_dev_s;
@@ -183,12 +168,12 @@ struct lsm303agr_ops_s
 
 struct lsm303agr_dev_s
 {
-  FAR struct i2c_master_s          *i2c; /* I2C interface */
+  FAR struct i2c_master_s          *i2c;  /* I2C interface */
   uint8_t                           addr; /* I2C address */
 
   FAR const struct lsm303agr_ops_s *ops;
 
-  uint8_t                           datareg; /* Output data register of X low byte */
+  uint8_t                           datareg;     /* Output data register of X low byte */
   struct lsm303agr_sensor_data_s    sensor_data; /* Sensor data container */
 };
 
@@ -218,7 +203,7 @@ extern "C"
  ****************************************************************************/
 
 int lsm303agr_sensor_register(FAR const char *devpath,
-                              FAR struct i2c_master_s *i2c,uint8_t addr);
+                              FAR struct i2c_master_s *i2c, uint8_t addr);
 
 #ifdef __cplusplus
 }

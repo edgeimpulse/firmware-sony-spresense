@@ -1,478 +1,300 @@
-/* Edge Impulse ingestion SDK
- * Copyright (c) 2021 EdgeImpulse Inc.
+/*
+ * Copyright (c) 2022 EdgeImpulse Inc.
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
  */
 
-/* Include ----------------------------------------------------------------- */
+/* Includes ---------------------------------------------------------------- */
+#include <string>
+
+#include "edge-impulse-sdk/porting/ei_classifier_porting.h"
+#include "firmware-sdk/ei_device_info_lib.h"
+#include "firmware-sdk/ei_device_memory.h"
+
 #include "ei_device_sony_spresense.h"
-#include "ei_sony_spresense_fs_commands.h"
-#include "ei_classifier_porting.h"
-#include "edge-impulse-sdk/dsp/ei_utils.h"
-#include "ei_inertialsensor.h"
+#include "ei_flash_memory.h"
+#include "ei_board.h"
 #include "ei_microphone.h"
-#include "repl.h"
+#include "ei_timer.h"
 
-#include <cstdarg>
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
+#define DEFAULT_BAUD    (115200u)
+#define MAX_BAUD_RATE   (921600u)
 
-
-/** Max size for device id array */
-#define DEVICE_ID_MAX_SIZE 32
 
 /** Sensors */
 typedef enum
 {
     MICROPHONE = 0,
-    ACCELEROMETER
+    MAX_USED_SENSOR
 } used_sensors_t;
 
+/******
+ *
+ * @brief EdgeImpulse Device structure and information
+ *
+ ******/
 
-/** Data Output Baudrate */
-const ei_device_data_output_baudrate_t ei_dev_max_data_output_baudrate = {
-    ei_xstr(MAX_BAUD),
-    MAX_BAUD,
-};
-
-const ei_device_data_output_baudrate_t ei_dev_default_data_output_baudrate = {
-    ei_xstr(DEFAULT_BAUD),
-    DEFAULT_BAUD,
-};
-
-// forward declare the sony uart driver func b/c the header doesn't play nice
-extern "C" void cxd56_setbaud(uintptr_t uartbase, uint32_t basefreq, uint32_t baud);
-#define BOARD_FCLKOUT_FREQUENCY   (100000000)
-/* UART clocking ***********************************************************/
-#define BOARD_UART1_BASEFREQ        BOARD_FCLKOUT_FREQUENCY
-
-/** Device type */
-static const char *ei_device_type = "SONY_SPRESENSE";
-
-/** Device id array */
-static char ei_device_id[DEVICE_ID_MAX_SIZE];
-
-/** Device object, for this class only 1 object should exist */
-EiDeviceSonySpresense EiDevice;
-
-static EiState ei_program_state = eiStateIdle;
-
-
-/* Private function declarations ------------------------------------------- */
-static int get_id_c(uint8_t out_buffer[32], size_t *out_size);
-static int set_id_c(char *device_id);
-static int get_type_c(uint8_t out_buffer[32], size_t *out_size);
-static bool get_wifi_connection_status_c(void);
-static bool get_wifi_present_status_c(void);
-// static void timer_callback(void *arg);
-static bool read_sample_buffer(size_t begin, size_t length, void (*data_fn)(uint8_t *, size_t));
-static int get_data_output_baudrate_c(ei_device_data_output_baudrate_t *baudrate);
-
-extern char spresense_getchar(void);
-extern void spresense_putchar(char byte);
-extern "C" void spresense_ledcontrol(uint32_t led, bool on_off);
-
-/* Public functions -------------------------------------------------------- */
-
-EiDeviceInfo* EiDeviceInfo::get_device() { return &EiDevice; }
-
-EiDeviceSonySpresense::EiDeviceSonySpresense(void)
+EiDeviceSonySpresense::EiDeviceSonySpresense(EiDeviceMemory* mem)
 {
-}
+    EiDeviceInfo::memory = mem;
 
-/**
- * @brief      For the device ID, the BLE mac address is used.
- *             The mac address string is copied to the out_buffer.
- *
- * @param      out_buffer  Destination array for id string
- * @param      out_size    Length of id string
- *
- * @return     0
- */
-int EiDeviceSonySpresense::get_id(uint8_t out_buffer[32], size_t *out_size)
-{
-    return get_id_c(out_buffer, out_size);
-}
+    init_device_id();
+    load_config();
 
-/**
- * @brief      Gets the identifier pointer.
- *
- * @return     The identifier pointer.
- */
-const char *EiDeviceSonySpresense::get_id_pointer(void)
-{
-    return (const char *)ei_device_id;
-}
+    device_type = "SONY_SPRESENSE"; /* TODO-MODIFY update the device name */
 
-/**
- * @brief      Copy device type in out_buffer & update out_size
- *
- * @param      out_buffer  Destination array for device type string
- * @param      out_size    Length of string
- *
- * @return     -1 if device type string exceeds out_buffer
- */
-int EiDeviceSonySpresense::get_type(uint8_t out_buffer[32], size_t *out_size)
-{
-    return get_type_c(out_buffer, out_size);
-}
-
-/**
- * @brief      Gets the type pointer.
- *
- * @return     The type pointer.
- */
-const char *EiDeviceSonySpresense::get_type_pointer(void)
-{
-    return (const char *)ei_device_type;
-}
-
-/**
- * @brief      No Wifi available for device.
- *
- * @return     Always return false
- */
-bool EiDeviceSonySpresense::get_wifi_connection_status(void)
-{
-    return false;
-}
-
-/**
- * @brief      No Wifi available for device.
- *
- * @return     Always return false
- */
-bool EiDeviceSonySpresense::get_wifi_present_status(void)
-{
-    return false;
-}
-
-/**
- * @brief      Create sensor list with sensor specs
- *             The studio and daemon require this list
- * @param      sensor_list       Place pointer to sensor list
- * @param      sensor_list_size  Write number of sensors here
- *
- * @return     False if all went ok
- */
-bool EiDeviceSonySpresense::get_sensor_list(
-    const ei_device_sensor_t **sensor_list,
-    size_t *sensor_list_size)
-{
-    /* Calculate number of bytes available on flash for sampling, reserve 1 block for header + overhead */
-    uint32_t available_bytes = (ei_sony_spresense_fs_get_n_available_sample_blocks() - 1) *
-        ei_sony_spresense_fs_get_block_size();
+        /* Calculate number of bytes available on flash for sampling, reserve 1 block for header + overhead */
+    uint32_t available_bytes = ((mem->get_available_sample_blocks() - 1) * mem->block_size);
 
     sensors[MICROPHONE].name = "Built-in microphone";
     sensors[MICROPHONE].start_sampling_cb = &ei_microphone_sample_start;
     sensors[MICROPHONE].max_sample_length_s = available_bytes / (16000 * 2);
     sensors[MICROPHONE].frequencies[0] = 16000.0f;
 
+    /* Init camera instance */
+    camera = static_cast<EiCameraSony*>(EiCamera::get_camera());
+}
 
-    sensors[ACCELEROMETER].name = "Built-in accelerometer";
-    sensors[ACCELEROMETER].start_sampling_cb = &ei_inertial_setup_data_sampling;
+EiDeviceSonySpresense::~EiDeviceSonySpresense()
+{
 
-    sensors[ACCELEROMETER].max_sample_length_s = available_bytes / (100 * SIZEOF_N_AXIS_SAMPLED);
-    sensors[ACCELEROMETER].frequencies[0] = 62.5f;
-    sensors[ACCELEROMETER].frequencies[1] = 250.0f;
-    sensors[ACCELEROMETER].frequencies[2] = 500.0f;
+}
 
+EiDeviceInfo* EiDeviceInfo::get_device(void)
+{
+    /* Initializing EdgeImpulse classes here in order for
+     * Flash memory to be initialized before mainloop start
+     */
+    static EiFlashMemory memory(sizeof(EiConfig));
+    static EiDeviceSonySpresense dev(&memory);
 
-    *sensor_list = sensors;
-    *sensor_list_size = EI_DEVICE_N_SENSORS;
-
-    return false;
+    return &dev;
 }
 
 /**
- * @brief      Create resolution list for snapshot setting
- *             The studio and daemon require this list
- * @param      snapshot_list       Place pointer to resolution list
- * @param      snapshot_list_size  Write number of resolutions here
- *
- * @return     False if all went ok
+ * @brief 
+ * 
  */
-bool EiDeviceSonySpresense::get_snapshot_list(
-    const ei_device_snapshot_resolutions_t **snapshot_list,
-    size_t *snapshot_list_size,
-    const char **color_depth)
+void EiDeviceSonySpresense::init_device_id(void)
 {
-    snapshot_resolutions[0].width = 320;
-    snapshot_resolutions[0].height = 240;
-    snapshot_resolutions[1].width = 160;
-    snapshot_resolutions[1].height = 160;
-    snapshot_resolutions[2].width = 96;
-    snapshot_resolutions[2].height = 96;
-    snapshot_resolutions[3].width = 96;
-    snapshot_resolutions[3].height = 64;
+    char temp[32];
 
-#if defined(EI_CLASSIFIER_SENSOR) && EI_CLASSIFIER_SENSOR == EI_CLASSIFIER_SENSOR_CAMERA
-    snapshot_resolutions[4].width = EI_CLASSIFIER_INPUT_WIDTH;
-    snapshot_resolutions[4].height = EI_CLASSIFIER_INPUT_HEIGHT;
-#endif
+    spresense_get_chip_id(temp);
 
-    *snapshot_list = snapshot_resolutions;
-    *snapshot_list_size = EI_DEVICE_N_RESOLUTIONS;
-    *color_depth = "RGB";
-
-    return false;
+    device_id = std::string(temp);
 }
 
 /**
- * @brief      Device specific delay ms implementation
- *
- * @param[in]  milliseconds  The milliseconds
+ * @brief 
+ * 
  */
-void EiDeviceSonySpresense::delay_ms(uint32_t milliseconds)
+void EiDeviceSonySpresense::clear_config(void)
 {
-    ei_sleep(milliseconds);
-}
+    EiDeviceInfo::clear_config();
 
-void EiDeviceSonySpresense::setup_led_control(void)
-{
-    // tHalTmr *AppTmr = NULL;
-    // /* Create Periodic timer */
-    // AppTmr = HalTmrCreate(HalTmrCh0, HalTmrPeriodic, 1000, timer_callback, AppTmr);
-    // if (!AppTmr)
-    //     ei_printf("TImer Creatation Failed\n");
-    // else
-    //     HalTmrStart(AppTmr);
-}
-
-void EiDeviceSonySpresense::set_state(EiState state)
-{
-    ei_program_state = state;
-
-    if (state == eiStateFinished) {
-        spresense_ledcontrol(LEDALL, 0);
-        EiDevice.delay_ms(100);
-        spresense_ledcontrol(LED1, 1);
-        EiDevice.delay_ms(100);
-        spresense_ledcontrol(LED2, 1);
-        EiDevice.delay_ms(100);
-        spresense_ledcontrol(LED3, 1);
-        EiDevice.delay_ms(100);
-        spresense_ledcontrol(LED4, 1);
-        EiDevice.delay_ms(200);
-        spresense_ledcontrol(LEDALL, 0);
-        EiDevice.delay_ms(200);
-        spresense_ledcontrol(LEDALL, 1);
-        EiDevice.delay_ms(200);
-        spresense_ledcontrol(LEDALL, 0);
-
-        ei_program_state = eiStateIdle;
-    }
+    init_device_id();
+    save_config();
 }
 
 /**
- * @brief      Get the data output baudrate
- *
- * @param      baudrate    Baudrate used to output data
- *
- * @return     0
+ * @brief 
+ * 
+ * @return uint32_t 
  */
-int EiDeviceSonySpresense::get_data_output_baudrate(ei_device_data_output_baudrate_t *baudrate)
+uint32_t EiDeviceSonySpresense::get_data_output_baudrate(void)
 {
-    return get_data_output_baudrate_c(baudrate);
+    return MAX_BAUD_RATE;
 }
 
 /**
  * @brief      Set output baudrate to max
  *
  */
-void EiDeviceSonySpresense::set_max_data_output_baudrate()
+void EiDeviceSonySpresense::set_max_data_output_baudrate(void)
 {
-    set_max_data_output_baudrate_c();
+    spresense_uart_flush();
+    spresense_set_uart(MAX_BAUD_RATE);    
 }
 
 /**
  * @brief      Set output baudrate to default
  *
  */
-void EiDeviceSonySpresense::set_default_data_output_baudrate()
+void EiDeviceSonySpresense::set_default_data_output_baudrate(void)
 {
-    set_default_data_output_baudrate_c();
+    spresense_uart_flush();
+    spresense_set_uart(DEFAULT_BAUD);
 }
 
-void EiDeviceSonySpresense::init_device_id(void)
+void EiDeviceSonySpresense::set_state(EiState state)
 {
+    this->state = state;
 
-}
+    if (state == eiStateFinished) {
+        spresense_ledcontrol(LEDALL, 0);
+        ei_sleep(100);
+        spresense_ledcontrol(LED1, 1);
+        ei_sleep(100);
+        spresense_ledcontrol(LED2, 1);
+        ei_sleep(100);
+        spresense_ledcontrol(LED3, 1);
+        ei_sleep(100);
+        spresense_ledcontrol(LED4, 1);
+        ei_sleep(200);
+        spresense_ledcontrol(LEDALL, 0);
+        ei_sleep(200);
+        spresense_ledcontrol(LEDALL, 1);
+        ei_sleep(200);
+        spresense_ledcontrol(LEDALL, 0);
 
-/**
- * @brief      Get a C callback for the get_id method
- *
- * @return     Pointer to c get function
- */
-c_callback EiDeviceSonySpresense::get_id_function(void)
-{
-    return &get_id_c;
-}
-
-/**
- * @brief      Get a C callback for the set_id method
- *
- * @return     Pointer to c get function
- */
-c_callback_set_id EiDeviceSonySpresense::set_id_function(void)
-{
-    return &set_id_c;
-}
-
-/**
- * @brief      Set the device ID
- *
- * @param      device_id   MAC address
- *
- * @return     0
- */
-int EiDeviceSonySpresense::set_id(char *device_id)
-{
-    return set_id_c(device_id);
-}
-
-/**
- * @brief      Get a C callback for the get_type method
- *
- * @return     Pointer to c get function
- */
-c_callback EiDeviceSonySpresense::get_type_function(void)
-{
-    return &get_type_c;
-}
-
-/**
- * @brief      Get a C callback for the get_wifi_connection_status method
- *
- * @return     Pointer to c get function
- */
-c_callback_status EiDeviceSonySpresense::get_wifi_connection_status_function(void)
-{
-    return &get_wifi_connection_status_c;
-}
-
-/**
- * @brief      Get a C callback for the wifi present method
- *
- * @return     The wifi present status function.
- */
-c_callback_status EiDeviceSonySpresense::get_wifi_present_status_function(void)
-{
-    return &get_wifi_present_status_c;
-}
-
-/**
- * @brief      Get a C callback to the read sample buffer function
- *
- * @return     The read sample buffer function.
- */
-c_callback_read_sample_buffer EiDeviceSonySpresense::get_read_sample_buffer_function(void)
-{
-    return &read_sample_buffer;
-}
-
-/**
- * @brief      Get characters for uart pheripheral and send to repl
- */
-void ei_command_line_handle(void)
-{
-    uint8_t data;
-
-    data = spresense_getchar();
-
-    if(data != 0) {
-        rx_callback(data);
+        this->state = eiStateIdle;
     }
 }
 
-/**
- * @brief      Setup the serial port
- */
-void ei_serial_setup(void)
+EiState EiDeviceSonySpresense::get_state(void)
 {
+    return this->state;
+}
 
+EiSnapshotProperties EiDeviceSonySpresense::get_snapshot_list(void)
+{
+    ei_device_snapshot_resolutions_t *res = NULL;
+    uint8_t res_num = 0;
+
+    EiSnapshotProperties props = {
+        .has_snapshot = false,
+        .support_stream = false,
+        .color_depth = "",
+        .resolutions_num = 0,
+        .resolutions = res
+    };
+
+    if(this->camera->is_camera_present() == true) {
+        this->camera->get_resolutions(&res, &res_num);
+        props.has_snapshot = true;
+        props.support_stream = true;
+        props.color_depth = "RGB";
+        props.resolutions_num = res_num;
+        props.resolutions = res;
+    }
+
+
+    return props;
 }
 
 /**
- * @brief      Printf function uses vsnprintf and output to UART
- *
- * @param[in]  format     Variable argument list
+ * @brief 
+ * 
+ * @param sample_read_cb 
+ * @param sample_interval_ms 
+ * @return true 
+ * @return false 
  */
-void ei_printf(const char *format, ...)
+bool EiDeviceSonySpresense::start_sample_thread(void (*sample_read_cb)(void), float sample_interval_ms)
 {
-    char buffer[256];
-    int length;
-    va_list myargs;
-    va_start(myargs, format);
-    length = vsprintf(buffer, format, myargs);
-    va_end(myargs);
+    int ret = ei_timer_init(&local_sample_thread, (uint32_t)sample_interval_ms * 1000);
 
-    for(int i = 0; i < length; i++) {
-        ei_putc(buffer[i]);
+    if (ret != 0) {
+        ei_printf("Error in ei_timer_init %d", ret);
+        return false;
+    }
+
+    this->sample_interval_ms = sample_interval_ms;
+    this->is_sampling = true;
+    this->sample_read_callback = sample_read_cb;
+
+    return true;
+}
+
+/**
+ * @brief 
+ * 
+ * @return true 
+ * @return false 
+ */
+bool EiDeviceSonySpresense::stop_sample_thread(void)
+{
+    this->is_sampling = false;
+    ei_timer_stop();
+
+    return true;
+}
+
+/**
+ * @brief 
+ * 
+ * @return true 
+ * @return false 
+ */
+bool EiDeviceSonySpresense::is_camera_present()
+{
+    return this->camera->is_camera_present();
+}
+
+/**
+ * @brief 
+ * 
+ * @param sensor_list 
+ * @param sensor_list_size 
+ * @return true 
+ * @return false 
+ */
+bool EiDeviceSonySpresense::get_sensor_list(const ei_device_sensor_t **sensor_list, size_t *sensor_list_size)
+{
+    *sensor_list      = sensors;
+    *sensor_list_size = MAX_USED_SENSOR;
+
+    return false;
+}
+
+/**
+ * @brief Wrapper for camera stop_stream
+ * 
+ * @return true 
+ * @return false 
+ */
+bool EiDeviceSonySpresense::stop_stream(void)
+{
+    if (camera->stop_stream() == true) {
+        ei_printf("OK\n");
+        this->set_default_data_output_baudrate();
+        ei_sleep(100);
+        ei_printf("Snapshot streaming stopped by user\n");
+        ei_printf("OK\n");
+        return true;
+    }
+    else {
+        ei_printf("Error in stop streaming\n");
+
+        ei_printf("OK\n");
+        this->set_default_data_output_baudrate();
+        ei_sleep(100);        
+        ei_printf("OK\n");
+        return false;
     }
 }
 
-/**
- * @brief      Print a float value, bypassing the stdio %f
- *             Uses standard serial out
- *
- * @param[in]  f     Float value to print.
- */
-void ei_printf_float(float f)
-{
-    ei_printf("%f", f);
-}
 
-/**
- * @brief      Write serial data with length to Serial output
- *
- * @param      data    The data
- * @param[in]  length  The length
- */
-void ei_write_string(char *data, int length)
-{
-    for (int i = 0; i < length; i++) {
-        ei_putc(*(data++));
-    }
-}
-
-/**
- * @brief      Write single character to serial output
- *
- * @param[in]  cChar  The character
- */
-void ei_putc(char cChar)
-{
-    spresense_putchar(cChar);
-}
-void ei_putchar(char cChar)
-{
-    spresense_putchar(cChar);
-}
 /* Private functions ------------------------------------------------------- */
+#if 0
 static void timer_callback(void *arg)
 {
+    EiDeviceSonySpresense* dev = static_cast<EiDeviceSonySpresense*>(EiDeviceSonySpresense::get_device());
+
     static char toggle = 0;
 
     if (toggle) {
-        switch (ei_program_state) {
+        switch (dev->get_state()) {
         case eiStateErasingFlash:
             spresense_ledcontrol(LED1, 1);
             break;
@@ -487,132 +309,34 @@ static void timer_callback(void *arg)
         }
     }
     else {
-        if (ei_program_state != eiStateFinished) {
+        if (dev->get_state() != eiStateFinished) {
             spresense_ledcontrol(LEDALL, 0);
         }
     }
     toggle ^= 1;
 }
-
-
-char ei_getchar()
-{
-    return spresense_getchar();
-
-}
-
-
-static int get_id_c(uint8_t out_buffer[32], size_t *out_size)
-{
-    size_t length = strlen(ei_device_id);
-
-    if (length < 32) {
-        memcpy(out_buffer, ei_device_id, length);
-
-        *out_size = length;
-        return 0;
-    }
-
-    else {
-        *out_size = 0;
-        return -1;
-    }
-}
-
-static int set_id_c(char *device_id)
-{
-    size_t length = strlen(ei_device_id);
-    if (length > 31) {
-        return -1;
-    }
-
-    memcpy(ei_device_id, device_id, strlen(device_id) + 1);
-
-    return 0;
-}
-
-static int get_type_c(uint8_t out_buffer[32], size_t *out_size)
-{
-    size_t length = strlen(ei_device_type);
-
-    if (length < 32) {
-        memcpy(out_buffer, ei_device_type, length);
-
-        *out_size = length;
-        return 0;
-    }
-
-    else {
-        *out_size = 0;
-        return -1;
-    }
-}
-
-static bool get_wifi_connection_status_c(void)
-{
-    return false;
-}
-
-static bool get_wifi_present_status_c(void)
-{
-    return false;
-}
-
-static int get_data_output_baudrate_c(ei_device_data_output_baudrate_t *baudrate)
-{
-    size_t length = strlen(ei_dev_max_data_output_baudrate.str);
-
-    if (length < 32) {
-        memcpy(baudrate, &ei_dev_max_data_output_baudrate, sizeof(ei_device_data_output_baudrate_t));
-        return 0;
-    }
-    else {
-        return -1;
-    }
-}
+#endif
 
 /**
- * @brief      Read samples from sample memory and send to data_fn function
- *
- * @param[in]  begin    Start address
- * @param[in]  length   Length of samples in bytes
- * @param[in]  data_fn  Callback function for sample data
- *
- * @return     false on flash read function
+ * @brief 
+ * 
+ * @return unsigned int 
  */
-static bool read_sample_buffer(size_t begin, size_t length, void (*data_fn)(uint8_t *, size_t))
+unsigned int local_sample_thread(void)
 {
-    size_t pos = begin;
-    size_t bytes_left = length;
-    bool retVal;
+    EiDeviceSonySpresense* dev = static_cast<EiDeviceSonySpresense*>(EiDeviceSonySpresense::get_device());
+    unsigned int next_interval = 0;
 
-    EiDevice.set_state(eiStateUploading);
-
-    // we're encoding as base64 in AT+READFILE, so this needs to be divisable by 3
-    uint8_t buffer[513];
-    while (1) {
-        size_t bytes_to_read = sizeof(buffer);
-        if (bytes_to_read > bytes_left) {
-            bytes_to_read = bytes_left;
-        }
-        if (bytes_to_read == 0) {
-            retVal = true;
-            break;
-        }
-
-        int r = ei_sony_spresense_fs_read_sample_data(buffer, pos, bytes_to_read);
-        if (r != 0) {
-            retVal = false;
-            break;
-        }
-        data_fn(buffer, bytes_to_read);
-
-        pos += bytes_to_read;
-        bytes_left -= bytes_to_read;
+    if (dev != nullptr) {
+        dev->sample_read_callback();
     }
 
-    ei_sony_spresense_fs_close_sample_file();
-    EiDevice.set_state(eiStateFinished);
+    if (dev->get_is_sampling() == true) {        
+        next_interval =  (dev->get_sample_interval_ms() * 1000);
+    }
+    else {
 
-    return retVal;
+    }
+
+    return next_interval;
 }

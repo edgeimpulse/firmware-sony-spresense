@@ -2,35 +2,20 @@
  * include/nuttx/power/battery_ioctl.h
  * NuttX Battery IOCTLs definition
  *
- *   Copyright (C) 2015, 2017 Gregory Nutt. All rights reserved.
- *   Author: Gregory Nutt <gnutt@nuttx.org>
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.  The
+ * ASF licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the
+ * License.  You may obtain a copy of the License at
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in
- *    the documentation and/or other materials provided with the
- *    distribution.
- * 3. Neither the name NuttX nor the names of its contributors may be
- *    used to endorse or promote products derived from this software
- *    without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
- * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
- * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
- * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
- * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
- * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
  *
  ****************************************************************************/
 
@@ -61,10 +46,69 @@
 #define BATIOC_INPUT_CURRENT _BATIOC(0x0006)
 #define BATIOC_CAPACITY      _BATIOC(0x0007)
 #define BATIOC_OPERATE       _BATIOC(0x0008)
+#define BATIOC_CELLVOLTAGE   _BATIOC(0x0009)
+#define BATIOC_TEMPERATURE   _BATIOC(0x000A)
+#define BATIOC_BALANCE       _BATIOC(0x000B)
+#define BATIOC_SHUTDOWN      _BATIOC(0x000C)
+#define BATIOC_SETLIMITS     _BATIOC(0x000D)
+#define BATIOC_CHGDSG        _BATIOC(0x000E)
+#define BATIOC_CLEARFAULTS   _BATIOC(0x000F)
+#define BATIOC_COULOMBS      _BATIOC(0x0010)
+
+/* Special input values for BATIOC_INPUT_CURRENT that may optionally
+ * be supported by lower-half driver:
+ */
+
+#define BATTERY_INPUT_CURRENT_EXT_LIM   (-1) /* External input current limit */
+
+/* The change mask definition used to set the mask. */
+
+#define BATTERY_STATE_CHANGED           (1U << 0)
+#define BATTERY_HEALTH_CHANGED          (1U << 1)
+#define BATTERY_ONLINE_CHANGED          (1U << 2)
+#define BATTERY_VOLTAGE_CHANGED         (1U << 3)
+#define BATTERY_CURRENT_CHANGED         (1U << 4)
+#define BATTERY_CAPACITY_CHANGED        (1U << 5)
+#define BATTERY_CELLVOLTAGE_CHANGED     (1U << 6)
+#define BATTERY_TEMPERATURE_CHANGED     (1U << 7)
+#define BATTERY_COULOMBS_CHANGED        (1U << 8)
 
 /****************************************************************************
  * Public Types
  ****************************************************************************/
+
+/* Battery status */
+
+enum battery_status_e
+{
+  BATTERY_UNKNOWN = 0, /* Battery state is not known */
+  BATTERY_FAULT,       /* Charger reported a fault, get health for more info */
+  BATTERY_IDLE,        /* Not full, not charging, not discharging */
+  BATTERY_FULL,        /* Full, not discharging */
+  BATTERY_CHARGING,    /* Not full, charging */
+  BATTERY_DISCHARGING  /* Probably not full, discharging */
+};
+
+/* Battery Health status */
+
+enum battery_health_e
+{
+  BATTERY_HEALTH_UNKNOWN = 0,   /* Battery health state is not known */
+  BATTERY_HEALTH_GOOD,          /* Battery is in good condiction */
+  BATTERY_HEALTH_DEAD,          /* Battery is dead, nothing we can do */
+  BATTERY_HEALTH_OVERHEAT,      /* Battery is over recommended temperature */
+  BATTERY_HEALTH_OVERVOLTAGE,   /* Battery voltage is over recommended level */
+  BATTERY_HEALTH_UNDERVOLTAGE,  /* Battery monitor reported an unspecified failure */
+  BATTERY_HEALTH_OVERCURRENT,   /* Battery monitor reported an overcurrent event */
+  BATTERY_HEALTH_SHORT_CIRCUIT, /* Battery monitor reported a short circuit event */
+  BATTERY_HEALTH_UNSPEC_FAIL,   /* Battery charger reported an unspected failure */
+  BATTERY_HEALTH_COLD,          /* Battery is under recommended temperature */
+  BATTERY_HEALTH_WD_TMR_EXP,    /* Battery WatchDog Timer Expired */
+  BATTERY_HEALTH_SAFE_TMR_EXP,  /* Battery Safety Timer Expired */
+  BATTERY_HEALTH_DISCONNECTED   /* Battery is not connected */
+};
+
+/* Battery operation message */
 
 struct batio_operate_msg_s
 {

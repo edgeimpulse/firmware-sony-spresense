@@ -2,35 +2,20 @@
  * include/nuttx/power/battery_gauge.h
  * NuttX Battery Fuel Gauge Interfaces
  *
- *   Copyright (C) 2012, 2015 Gregory Nutt. All rights reserved.
- *   Author: Gregory Nutt <gnutt@nuttx.org>
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.  The
+ * ASF licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the
+ * License.  You may obtain a copy of the License at
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in
- *    the documentation and/or other materials provided with the
- *    distribution.
- * 3. Neither the name NuttX nor the names of its contributors may be
- *    used to endorse or promote products derived from this software
- *    without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
- * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
- * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
- * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
- * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
- * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
  *
  ****************************************************************************/
 
@@ -44,6 +29,7 @@
 #include <nuttx/config.h>
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/semaphore.h>
+#include <nuttx/list.h>
 
 #include <stdbool.h>
 #include <fixedmath.h>
@@ -53,7 +39,9 @@
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
-/* Configuration ************************************************************/
+
+/* Configuration */
+
 /* CONFIG_BATTERY_GAUGE - Upper half battery fuel gauge driver support
  *
  * Specific, lower-half drivers will have other configuration requirements
@@ -63,7 +51,8 @@
  *   CONFIG_I2C_MAX1704X - The MAX1704x driver must be explicitly selected.
  */
 
-/* IOCTL Commands ***********************************************************/
+/* IOCTL Commands */
+
 /* The upper-half battery fuel gauge driver provides a character driver
  * "wrapper"  * around the lower-half battery driver that does all of the
  * real work.
@@ -73,7 +62,7 @@
  * lower half as summarized below:
  *
  * BATIOC_STATE - Return the current state of the battery (see
- *   enum battery_gauge_status_e).
+ *   enum battery_status_e).
  *   Input value:  A pointer to type int.
  * BATIOC_ONLINE - Return 1 if the battery is online; 0 if offline.
  *   Input value:  A pointer to type bool.
@@ -89,23 +78,13 @@
 /****************************************************************************
  * Public Types
  ****************************************************************************/
-/* Battery status */
 
-enum battery_gauge_status_e
-{
-  BATTERY_UNKNOWN = 0, /* Battery state is not known */
-  BATTERY_IDLE,        /* Not full, not charging, not discharging */
-  BATTERY_FULL,        /* Full, not discharging */
-  BATTERY_CHARGING,    /* Not full, charging */
-  BATTERY_DISCHARGING  /* Probably not full, discharging */
-};
-
- /* This structure defines the lower half battery interface */
+/* This structure defines the lower half battery interface */
 
 struct battery_gauge_dev_s;
 struct battery_gauge_operations_s
 {
-  /* Return the current battery state (see enum battery_gauge_status_e) */
+  /* Return the current battery state (see enum battery_status_e) */
 
   int (*state)(struct battery_gauge_dev_s *dev, int *status);
 
@@ -129,7 +108,9 @@ struct battery_gauge_dev_s
   /* Fields required by the upper-half driver */
 
   FAR const struct battery_gauge_operations_s *ops; /* Battery operations */
-  sem_t batsem;  /* Enforce mutually exclusive access */
+  sem_t batsem;                                     /* Enforce mutually exclusive access */
+
+  struct list_node flist;
 
   /* Data fields specific to the lower-half driver may follow */
 };
@@ -151,6 +132,14 @@ extern "C"
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: battery_gauge_changed
+ ****************************************************************************/
+
+int battery_gauge_changed(FAR struct battery_gauge_dev_s *dev,
+                            uint32_t mask);
+
 /****************************************************************************
  * Name: battery_gauge_register
  *
@@ -172,6 +161,40 @@ int battery_gauge_register(FAR const char *devpath,
                            FAR struct battery_gauge_dev_s *dev);
 
 /****************************************************************************
+ * Name: bq27426_initialize
+ *
+ * Description:
+ *   Initialize the bq2742 battery driver and return an instance of the
+ *   lower_half interface that may be used with battery_gauge_register();
+ *
+ *   This driver requires:
+ *
+ *   CONFIG_BATTERY_GAUGE - Upper half battery fuel gauge driver support
+ *   CONFIG_I2C - I2C support
+ *   CONFIG_BQ27426 - And the driver must be explicitly selected.
+ *
+ * Input Parameters:
+ *   i2c - An instance of the I2C interface to use to communicate with the
+ *         bq27426
+ *   addr - The I2C address of the bq27426 (Better be 0x55).
+ *   frequency - The I2C frequency
+ *
+ * Returned Value:
+ *   A pointer to the initializeed battery driver instance.  A NULL pointer
+ *   is returned on a failure to initialize the bq27426 lower half.
+ *
+ ****************************************************************************/
+
+#if defined(CONFIG_I2C) && defined(CONFIG_BQ27426)
+struct i2c_master_s; /* Forward reference */
+
+FAR struct battery_gauge_dev_s *bq27426_initialize(
+                                                FAR struct i2c_master_s *i2c,
+                                                uint8_t addr,
+                                                uint32_t frequency);
+#endif
+
+/****************************************************************************
  * Name: max1704x_initialize
  *
  * Description:
@@ -182,12 +205,13 @@ int battery_gauge_register(FAR const char *devpath,
  *
  *   CONFIG_BATTERY_GAUGE - Upper half battery fuel gauge driver support
  *   CONFIG_I2C - I2C support
- *   CONFIG_I2C_MAX1704X - And the driver must be explictly selected.
+ *   CONFIG_I2C_MAX1704X - And the driver must be explicitly selected.
  *   CONFIG_I2C_MAX17040 or CONFIG_I2C_MAX17041 - The driver must know which
  *     chip is on the board in order to scale the voltage correctly.
  *
  * Input Parameters:
- *   i2c - An instance of the I2C interface to use to communicate with the MAX1704x
+ *   i2c - An instance of the I2C interface to use to communicate with
+ *         the MAX1704x.
  *   addr - The I2C address of the MAX1704x (Better be 0x36).
  *   frequency - The I2C frequency
  *
@@ -200,9 +224,10 @@ int battery_gauge_register(FAR const char *devpath,
 #if defined(CONFIG_I2C) && defined(CONFIG_I2C_MAX1704X)
 struct i2c_master_s; /* Forward reference */
 
-FAR struct battery_gauge_dev_s *max1704x_initialize(FAR struct i2c_master_s *i2c,
-                                                    uint8_t addr,
-                                                    uint32_t frequency);
+FAR struct battery_gauge_dev_s *max1704x_initialize(
+                                                FAR struct i2c_master_s *i2c,
+                                                uint8_t addr,
+                                                uint32_t frequency);
 #endif
 
 #undef EXTERN

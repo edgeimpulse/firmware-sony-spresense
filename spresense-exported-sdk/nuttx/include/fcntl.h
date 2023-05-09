@@ -1,35 +1,20 @@
 /********************************************************************************
  * include/fcntl.h
  *
- *   Copyright (C) 2007-2009, 2012 Gregory Nutt. All rights reserved.
- *   Author: Gregory Nutt <gnutt@nuttx.org>
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.  The
+ * ASF licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the
+ * License.  You may obtain a copy of the License at
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in
- *    the documentation and/or other materials provided with the
- *    distribution.
- * 3. Neither the name NuttX nor the names of its contributors may be
- *    used to endorse or promote products derived from this software
- *    without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
- * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
- * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
- * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
- * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
- * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
  *
  ********************************************************************************/
 
@@ -66,6 +51,7 @@
 #define O_DSYNC     O_SYNC          /* Equivalent to OSYNC in NuttX */
 #define O_BINARY    (1 << 8)        /* Open the file in binary (untranslated) mode. */
 #define O_DIRECT    (1 << 9)        /* Avoid caching, write directly to hardware */
+#define O_CLOEXEC   (1 << 10)       /* Close on execute */
 
 /* Unsupported, but required open flags */
 
@@ -109,6 +95,7 @@
 #define F_SETLKW    12 /* Like F_SETLK, but wait for lock to become available */
 #define F_SETOWN    13 /* Set pid that will receive SIGIO and SIGURG signals for fd */
 #define F_SETSIG    14 /* Set the signal to be sent */
+#define F_GETPATH   15 /* Get the path of the file descriptor(BSD/macOS) */
 
 /* For posix fcntl() and lockf() */
 
@@ -135,6 +122,20 @@
  */
 
 #define creat(path, mode) open(path, O_WRONLY|O_CREAT|O_TRUNC, mode)
+
+#if defined(CONFIG_FS_LARGEFILE) && defined(CONFIG_HAVE_LONG_LONG)
+#  define F_GETLK64         F_GETLK
+#  define F_SETLK64         F_SETLK
+#  define F_SETLKW64        F_SETLKW
+
+#  define flock64           flock
+#  define open64            open
+#  define openat64          openat
+#  define creat64           creat
+#  define fallocate64       fallocate
+#  define posix_fadvise64   posix_fadvise
+#  define posix_fallocate64 posix_fallocate
+#endif
 
 /********************************************************************************
  * Public Type Definitions
@@ -170,8 +171,10 @@ extern "C"
 
 /* POSIX-like File System Interfaces */
 
-int open(const char *path, int oflag, ...);
+int open(FAR const char *path, int oflag, ...);
 int fcntl(int fd, int cmd, ...);
+
+int posix_fallocate(int fd, off_t offset, off_t len);
 
 #undef EXTERN
 #if defined(__cplusplus)

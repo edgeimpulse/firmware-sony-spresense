@@ -37,7 +37,9 @@ INC_SPR += \
 	-I$(SPRESENSE_SDK)/sdk/include \
 	-I$(SPRESENSE_SDK)/sdk/modules/include \
 	-I edge_impulse \
-	-I edge_impulse/ingestion-sdk-platform/sony-spresense \
+	-I sensors_sony_includes \
+	-I edge_impulse/ingestion-sdk-platform/board \
+	-I edge_impulse/ingestion-sdk-platform/peripheral \
 	-I libraries/Audio \
 	-I libraries/MemoryUtil \
 	-I libraries/File \
@@ -48,9 +50,13 @@ INC_APP += \
 	-I$(BUILD) \
 	-I stdlib \
 	-I edge_impulse \
-	-I edge_impulse/ingestion-sdk-platform/sony-spresense \
+	-I edge_impulse/inference \
 	-I edge_impulse/ingestion-sdk-c \
-	-I edge_impulse/repl \
+	-I edge_impulse/ingestion-sdk-platform/board \
+	-I edge_impulse/ingestion-sdk-platform/peripheral \
+	-I edge_impulse/ingestion-sdk-platform/sensors \
+	-I edge_impulse/ingestion-sdk-platform/sony-spresense \
+	-I edge_impulse/model-parameters \
 	-I edge_impulse/QCBOR/inc \
 	-I edge_impulse/mbedtls_hmac_sha256_sw \
 	-I edge_impulse/edge-impulse-sdk \
@@ -72,10 +78,10 @@ INC_APP += \
 	-I edge_impulse/edge-impulse-sdk/tensorflow/lite/c \
 	-I edge_impulse/edge-impulse-sdk/tensorflow/lite/core/api \
 	-I edge_impulse/firmware-sdk \
+	-I edge_impulse/firmware-sdk/at-server \
 	-I edge_impulse/firmware-sdk/jpeg \
-	-I edge_impulse/model-parameters \
 	-I edge_impulse/tflite-model \
-	-I sensors \
+	-I sensors_sony_includes \
 
 CFLAGS += \
 	-DCONFIG_WCHAR_BUILTIN \
@@ -132,9 +138,23 @@ LDFLAGS = \
 	-u board_timerhook \
 	$(BUILD)/libapp.a \
 	$(SPRESENSE_SDK)/nuttx/libs/libapps.a \
-	$(SPRESENSE_SDK)/nuttx/libs/libnuttx.a \
+	$(SPRESENSE_SDK)/nuttx/libs/libarch.a \
+	$(SPRESENSE_SDK)/nuttx/libs/libaudio.a \
+	$(SPRESENSE_SDK)/nuttx/libs/libbinfmt.a \
+	$(SPRESENSE_SDK)/nuttx/libs/libboard.a \
+	$(SPRESENSE_SDK)/nuttx/libs/libboards.a \
+	$(SPRESENSE_SDK)/nuttx/libs/libc.a \
+	$(SPRESENSE_SDK)/nuttx/libs/libdrivers.a \
+	$(SPRESENSE_SDK)/nuttx/libs/libfs.a \
+	$(SPRESENSE_SDK)/nuttx/libs/libgcc.a \
+	$(SPRESENSE_SDK)/nuttx/libs/libm.a \
+	$(SPRESENSE_SDK)/nuttx/libs/libmm.a \
+	$(SPRESENSE_SDK)/nuttx/libs/libmodules.a \
+	$(SPRESENSE_SDK)/nuttx/libs/libnet.a \
+	$(SPRESENSE_SDK)/nuttx/libs/libnnablart.a \
+	$(SPRESENSE_SDK)/nuttx/libs/libsched.a \
+	$(SPRESENSE_SDK)/nuttx/libs/libxx.a \
 	$(LIBGCC) \
-	$(LIBM) \
 	$(LIBSTDC) \
 	--end-group \
 	-L$(BUILD) \
@@ -147,7 +167,8 @@ APPFLAGS += \
 	-DEIDSP_USE_CMSIS_DSP \
 	-DEIDSP_QUANTIZE_FILTERBANK=0 \
 	-DNDEBUG \
-	-DEI_CLASSIFIER_TFLITE_ENABLE_CMSIS_NN \
+	-DEI_CLASSIFIER_TFLITE_ENABLE_CMSIS_NN=1 \
+	-DEI_CLASSIFIER_TFLITE_LOAD_CMSIS_NN_SOURCES=1 \
 	-DARM_MATH_LOOPUNROLL \
 	-DEIDSP_LOAD_CMSIS_DSP_SOURCES=1 \
 
@@ -158,22 +179,28 @@ SRC_SPR_CXX += \
 	MemoryUtil.cpp \
 	Wire.cpp \
 	KX126.cpp \
-	ei_camera_driver_sony.cpp
+	ei_camera_driver_sony.cpp \
+	ei_board_ctrl.cpp
+
+SRC_SPR_C += \
+	ei_board.c \
+	spresense_flash.c \
+	ei_timer.c
 
 SRC_APP_CXX += \
 	ei_main.cpp \
-	ei_run_impulse.cpp \
 	$(notdir $(wildcard edge_impulse/edge-impulse-sdk/porting/sony/*.cpp)) \
 	$(notdir $(wildcard edge_impulse/firmware-sdk/*.cpp)) \
+	$(notdir $(wildcard edge_impulse/firmware-sdk/at-server/*.cpp)) \
 	$(notdir $(wildcard edge_impulse/firmware-sdk/jpeg/*.cpp)) \
 	$(notdir $(wildcard edge_impulse/edge-impulse-sdk/dsp/dct/*.cpp)) \
 	$(notdir $(wildcard edge_impulse/edge-impulse-sdk/dsp/kissfft/*.cpp)) \
-	$(notdir $(wildcard edge_impulse/edge-impulse-sdk/dsp/image/*.cpp ))\
+	$(notdir $(wildcard edge_impulse/edge-impulse-sdk/dsp/image/*.cpp )) \
+	$(notdir $(wildcard edge_impulse/inference/*.cpp)) \
+	$(notdir $(wildcard edge_impulse/ingestion-sdk-platform/sensors/*.cpp)) \
 	$(notdir $(wildcard edge_impulse/ingestion-sdk-platform/sony-spresense/*.cpp)) \
 	$(notdir $(wildcard edge_impulse/ingestion-sdk-c/*.cpp)) \
-	$(notdir $(wildcard edge_impulse/repl/*.cpp)) \
 	$(notdir $(wildcard edge_impulse/tflite-model/*.cpp)) \
-	$(notdir $(wildcard sensors/*.cpp)) \
 
 SRC_APP_CC += \
 	$(notdir $(wildcard edge_impulse/edge-impulse-sdk/tensorflow/lite/kernels/*.cc)) \
@@ -205,10 +232,14 @@ SRC_APP_C += \
 VPATH += stdlib \
 	edge_impulse/edge-impulse-sdk/porting/sony \
 	edge_impulse/firmware-sdk \
+	edge_impulse/firmware-sdk/at-server \
 	edge_impulse/firmware-sdk/jpeg \
-	edge_impulse/ingestion-sdk-platform/sony-spresense \
+	edge_impulse/inference \
 	edge_impulse/ingestion-sdk-c \
-	edge_impulse/repl \
+	edge_impulse/ingestion-sdk-platform/board \
+	edge_impulse/ingestion-sdk-platform/peripheral \
+	edge_impulse/ingestion-sdk-platform/sensors \
+	edge_impulse/ingestion-sdk-platform/sony-spresense \
 	edge_impulse/QCBOR/src \
 	edge_impulse/edge-impulse-sdk/dsp/dct \
 	edge_impulse/edge-impulse-sdk/dsp/image \
@@ -235,15 +266,15 @@ VPATH += stdlib \
 	edge_impulse/edge-impulse-sdk/CMSIS/NN/Source/SoftmaxFunctions \
 	edge_impulse/edge-impulse-sdk/CMSIS/NN/Source/SVDFunctions \
 	edge_impulse/tflite-model \
-	sensors \
 	sensors_sony_includes \
 	libraries/Audio \
 	libraries/MemoryUtil \
 	libraries/File \
 	libraries/Wire \
-	libraries/KXxx \
+	libraries/KXxx
 
 OBJ = $(addprefix $(BUILD)/spr/, $(SRC_SPR_CXX:.cpp=.o))
+OBJ += $(addprefix $(BUILD)/spr/, $(SRC_SPR_C:.c=.o))
 OBJ += $(addprefix $(BUILD)/app/, $(SRC_APP_CXX:.cpp=.o))
 OBJ += $(addprefix $(BUILD)/app/, $(SRC_APP_CC:.cc=.o))
 OBJ += $(addprefix $(BUILD)/app/, $(SRC_APP_C:.c=.o))
@@ -259,6 +290,10 @@ $(BUILD)/%.o: %.c
 
 $(BUILD)/spr/%.o: %.cpp
 	@"$(CXX)" $(CXXFLAGS) $(INC_SPR) -c -o $@ $<
+	@echo $<
+
+$(BUILD)/spr/%.o: %.c
+	@"$(CC)" $(CFLAGS) $(INC_SPR) -c -o $@ $<
 	@echo $<
 
 $(BUILD)/app/%.o: %.cpp

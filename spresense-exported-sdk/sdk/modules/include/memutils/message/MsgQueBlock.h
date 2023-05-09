@@ -193,7 +193,7 @@ protected:
 		Tally() { clear(); }
 		void clear() { memset(this, 0x00, sizeof(*this)); }
 		void dump() const {
-			printf("tally: total_pending=%d, max_pending=%d, max_queuing=%d, %d\n",
+			printf("tally: total_pending=%ld, max_pending=%d, max_queuing=%d, %d\n",
 				total_pending, max_pending, max_queuing[MsgPriNormal], max_queuing[MsgPriHigh]);
 		}
 	};
@@ -322,7 +322,7 @@ size_t MsgQueBlock::getSendSize(const T& /* param */, bool type_check)
 {
 	return type_check ?
 			sizeof(MsgPacketHeader) + sizeof(TypeHolder<T>) :
-			sizeof(MsgPacketHeader) + ROUND_UP(sizeof(T), sizeof(int));
+			sizeof(MsgPacketHeader) + MEMUTILS_ROUND_UP(sizeof(T), sizeof(int));
 }
 /* Send message size(No parameter). */
 
@@ -394,7 +394,7 @@ err_t MsgQueBlock::send(MsgPri pri, MsgType type, MsgQueId reply, MsgFlags flags
 
       if (isShare())
         {
-          Dcache_flush_clear(msg, ROUND_UP(sizeof(MsgPacketHeader), CACHE_BLOCK_SIZE));
+          Dcache_flush_clear(msg, MEMUTILS_ROUND_UP(sizeof(MsgPacketHeader), CACHE_BLOCK_SIZE));
         }
 
       /* Since most ITRON APIs can not be executed in the interrupt
@@ -420,7 +420,7 @@ err_t MsgQueBlock::send(MsgPri pri, MsgType type, MsgQueId reply, MsgFlags flags
       
       if (!MsgPacketInfo<T>::null_param && isShare())
         {
-          Dcache_flush_clear_sync(msg, ROUND_UP(send_size, CACHE_BLOCK_SIZE));
+          Dcache_flush_clear_sync(msg, MEMUTILS_ROUND_UP(send_size, CACHE_BLOCK_SIZE));
         }
 
       if (isShare() == false || isOwn())
@@ -743,15 +743,15 @@ inline void MsgQueBlock::unlock() {
  *****************************************************************/
 inline void MsgQueBlock::dump() const
 {
-	printf("ID:%d, init=%d, owner=%d, spinlock=%d, count_sem=%d, cur_pending=%d, cur_que=%08x\n",
-		m_id, m_initDone, m_owner, m_spinlock, m_count_sem, m_pendingMsgCount, m_cur_que);
+	printf("ID:%d, init=%d, owner=%d, spinlock=%d, count_sem=%d, cur_pending=%d, cur_que=%p\n",
+		m_id, m_initDone, m_owner, m_spinlock, m_count_sem.semcount, m_pendingMsgCount, m_cur_que);
 	m_tally.dump();
 
-	printf("Normal priority queue=%08x\n", &m_que[MsgPriNormal]);
+	printf("Normal priority queue=%p\n", &m_que[MsgPriNormal]);
 	m_que[MsgPriNormal].dump();
 
 	if (m_que[MsgPriHigh].capacity()) {
-		printf("High priority queue=%08x\n", &m_que[MsgPriHigh]);
+		printf("High priority queue=%p\n", &m_que[MsgPriHigh]);
 		m_que[MsgPriHigh].dump();
 	}
 }

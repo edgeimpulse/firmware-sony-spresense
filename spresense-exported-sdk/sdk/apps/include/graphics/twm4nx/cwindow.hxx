@@ -1,10 +1,23 @@
 /////////////////////////////////////////////////////////////////////////////
 // apps/include/graphics/twm4nx/cwindow.hxx
-// Represents one window instance
 //
-//   Copyright (C) 2019 Gregory Nutt. All rights reserved.
-//   Author: Gregory Nutt <gnutt@nuttx.org>
+// Licensed to the Apache Software Foundation (ASF) under one or more
+// contributor license agreements.  See the NOTICE file distributed with
+// this work for additional information regarding copyright ownership.  The
+// ASF licenses this file to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance with the
+// License.  You may obtain a copy of the License at
 //
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+// WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+// License for the specific language governing permissions and limitations
+// under the License.
+//
+/////////////////////////////////////////////////////////////////////////////
+
 // Largely an original work but derives from TWM 1.0.10 in many ways:
 //
 //   Copyright 1989,1998  The Open Group
@@ -13,35 +26,6 @@
 // Please refer to apps/twm4nx/COPYING for detailed copyright information.
 // Although not listed as a copyright holder, thanks and recognition need
 // to go to Tom LaStrange, the original author of TWM.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions
-// are met:
-//
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in
-//    the documentation and/or other materials provided with the
-//    distribution.
-// 3. Neither the name NuttX nor the names of its contributors may be
-//    used to endorse or promote products derived from this software
-//    without specific prior written permission.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-// "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-// LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
-// FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
-// COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
-// INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
-// OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
-// AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
-// LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
-// ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-// POSSIBILITY OF SUCH DAMAGE.
-//
-/////////////////////////////////////////////////////////////////////////////
 
 #ifndef __APPS_INCLUDE_GRAPHICS_TWM4NX_CWINDOW_HXX
 #define __APPS_INCLUDE_GRAPHICS_TWM4NX_CWINDOW_HXX
@@ -825,6 +809,11 @@ namespace Twm4Nx
           {
             m_iconWidget->getSize(size);
           }
+        else
+          {
+            size.w = 0;
+            size.h = 0;
+          }
       }
 
       /**
@@ -841,6 +830,11 @@ namespace Twm4Nx
         if (m_iconWidget != (FAR CIconWidget *)0)
           {
             m_iconWidget->getPos(pos);
+          }
+        else
+          {
+            pos.x = 0;
+            pos.y = 0;
           }
       }
 
@@ -886,7 +880,7 @@ namespace Twm4Nx
        * temporarily while in certain absorbing states (such as resizing the
        * window).
        *
-       * @param disables The set of buttons to enable or disble See
+       * @param disables The set of buttons to enable or disable See
        *   DISABLE_* definitions.
        */
 
@@ -908,7 +902,7 @@ namespace Twm4Nx
        // pollEvents() returns true if any interesting event occurred.
        // false is not a failure.
 
-        (void)control->pollEvents();
+        control->pollEvents();
         return true;
       }
 
@@ -943,4 +937,4 @@ namespace Twm4Nx
                                    uint8_t flags);
 }
 
-#endif  // __APPS_INCLUDE_GRAPHICS_TWM4NX_CWINDOW_HXX
+#endif // __APPS_INCLUDE_GRAPHICS_TWM4NX_CWINDOW_HXX

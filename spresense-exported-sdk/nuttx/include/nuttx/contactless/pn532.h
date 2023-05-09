@@ -1,37 +1,20 @@
 /****************************************************************************
- * include/contactless/pn532.h
+ * include/nuttx/contactless/pn532.h
  *
- *   Copyright(C) 2012, 2013, 2016 Offcode Ltd. All rights reserved.
- *   Authors: Janne Rosberg <janne@offcode.fi>
- *            Teemu Pirinen <teemu@offcode.fi>
- *            Juho Grundström <juho@offcode.fi>
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.  The
+ * ASF licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the
+ * License.  You may obtain a copy of the License at
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in
- *    the documentation and/or other materials provided with the
- *    distribution.
- * 3. Neither the name NuttX nor the names of its contributors may be
- *    used to endorse or promote products derived from this software
- *    without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
- * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES(INCLUDING,
- * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
- * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
- * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
- * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
  *
  ****************************************************************************/
 
@@ -75,7 +58,7 @@ struct pn532_config_s
   /* External CS, if NULL then SPIDEV_WIRELESS(n) CS is used */
 
   int (*select)(struct pn532_dev_s *dev, bool sel);
-  int (*irqattach)(void* dev, xcpt_t isr);
+  int (*irqattach)(void *dev, xcpt_t isr);
 };
 
 enum PN_SAM_MODE
@@ -97,9 +80,8 @@ enum PN_RF_CONFIG_ITEM
 {
   PN_RF_CONFIG_RF_FIELD         = 0x01,
   PN_RF_CONFIG_VARIOUS_TIMINGS  = 0x02,
-
-  PN_RF_CONFIG_ITEM_ANALOG_106A = 0x0A,
-  PN_RF_CONFIG_ITEM_ANALOG_212  = 0x0B,
+  PN_RF_CONFIG_ITEM_ANALOG_106A = 0x0a,
+  PN_RF_CONFIG_ITEM_ANALOG_212  = 0x0b,
 };
 
 struct pn_rf_config_s
@@ -116,7 +98,7 @@ struct pn_mifare_tag_data_s
 };
 
 /****************************************************************************
- * Public Functions
+ * Public Functions Definitions
  ****************************************************************************/
 
 #ifdef __cplusplus
@@ -135,7 +117,8 @@ extern "C"
  *
  * Input Parameters:
  *   devpath - The full path to the driver to register. E.g., "/dev/nfc0"
- *   spi     - An instance of the SPI interface to use to communicate with PN532
+ *   spi     - An instance of the SPI interface to use to communicate with
+ *             PN532
  *   config  - Device persistent board data
  *
  * Returned Value:

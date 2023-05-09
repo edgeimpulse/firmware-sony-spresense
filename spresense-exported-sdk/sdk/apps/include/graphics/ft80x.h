@@ -1,35 +1,20 @@
 /****************************************************************************
  * apps/include/graphics/ft80x.h
  *
- *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
- *   Author: Gregory Nutt <gnutt@nuttx.org>
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.  The
+ * ASF licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the
+ * License.  You may obtain a copy of the License at
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in
- *    the documentation and/or other materials provided with the
- *    distribution.
- * 3. Neither the name NuttX nor the names of its contributors may be
- *    used to endorse or promote products derived from this software
- *    without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
- * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
- * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
- * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
- * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
- * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
  *
  ****************************************************************************/
 
@@ -224,8 +209,8 @@ int ft80x_dl_string(int fd, FAR struct ft80x_dlbuffer_s *buffer,
  *   hardware and reset the local display list buffer offset to zero.
  *
  * Input Parameters:
- *   fd     - The file descriptor of the FT80x device.  Opened by the caller with
- *            write access.
+ *   fd     - The file descriptor of the FT80x device.  Opened by the caller
+ *            with write access.
  *   buffer - An instance of struct ft80x_dlbuffer_s allocated by the caller.
  *   wait   - True: wait until data has been consumed by the co-processor
  *            (only for co-processor destination); false:  Send to hardware
@@ -338,12 +323,12 @@ int ft80x_ramg_write(int fd, unsigned int offset, FAR const void *data,
  * Name: ft80x_touch_gettransform
  *
  * Description:
- *   Read the touch transfrom matrix
+ *   Read the touch transform matrix
  *
  * Input Parameters:
  *   fd     - The file descriptor of the FT80x device.  Opened by the caller
  *            with write access.
- *   matrix - The location to return the transfrom matrix
+ *   matrix - The location to return the transform matrix
  *
  * Returned Value:
  *   Zero (OK) on success.  A negated errno value on failure.
@@ -371,7 +356,8 @@ int ft80x_touch_gettransform(int fd, FAR uint32_t matrix[6]);
  *
  * Returned Value:
  *   A value of 1-255 is returned if a graphics object is touched.  Zero is
- *   returned if no graphics object is touched.  A negated errno value on failure.
+ *   returned if no graphics object is touched.  A negated errno value on
+ *   failure.
  *
  ****************************************************************************/
 
@@ -391,7 +377,8 @@ int ft80x_touch_tag(int fd);
  *
  * Returned Value:
  *   A value of 1-255 is returned if a graphics object is touched.  Zero is
- *   returned if no graphics object is touched.  A negated errno value on failure.
+ *   returned if no graphics object is touched.  A negated errno value on
+ *   failure.
  *
  ****************************************************************************/
 
@@ -415,7 +402,8 @@ int ft80x_touch_waittag(int fd, uint8_t oldtag);
  *
  * Returned Value:
  *   A value of 1-255 is returned if a graphics object is touched.  Zero is
- *   returned if no graphics object is touched.  A negated errno value on failure.
+ *   returned if no graphics object is touched.  A negated errno value on
+ *   failure.
  *
  ****************************************************************************/
 
@@ -494,11 +482,9 @@ int ft80x_audio_playsound(int fd, uint16_t effect, uint16_t pitch);
  *
  ****************************************************************************/
 
-#if CONFIG_NFILE_DESCRIPTORS > 3
 int ft80x_audio_playfile(int fd, FAR struct ft80x_dlbuffer_s *buffer,
                          FAR const char *filepath, uint8_t format,
                          uint16_t frequency, uint8_t volume);
-#endif
 
 /****************************************************************************
  * Name: ft80x_backlight_set
