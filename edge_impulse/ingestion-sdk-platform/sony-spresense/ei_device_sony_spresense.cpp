@@ -1,4 +1,37 @@
-/*
+#if MULTI_FREQ_ENABLED == 1
+/**
+ * 
+ */
+bool EiDeviceNanoBle33::start_multi_sample_thread(void (*sample_multi_read_cb)(uint8_t), float* multi_sample_interval_ms, uint8_t num_fusioned)
+{
+    uint8_t i;
+    uint8_t flag = 0;
+
+    this->sample_multi_read_callback = sample_multi_read_cb;
+    this->fusioning = num_fusioned;
+    this->multi_sample_interval.clear();
+
+    for (i = 0; i < num_fusioned; i++){
+        this->multi_sample_interval.push_back(1.f/multi_sample_interval_ms[i]*1000.f);
+    }
+
+    /* to improve, we consider just a 2 sensors case for now */
+    this->sample_interval = ei_fusion_calc_multi_gcd(this->multi_sample_interval.data(), this->fusioning);
+
+    /* force first reading */
+    for (i = 0; i < this->fusioning; i++){
+            flag |= (1<<i);
+    }
+    this->sample_multi_read_callback(flag);
+
+    this->actual_timer = 0;
+
+    fusion_thread.start(callback(&fusion_queue, &EventQueue::dispatch_forever));
+    fusion_sample_rate.attach(fusion_queue.event(multi_sample_thread), (this->sample_interval/1000.0f));
+
+    return true;
+}
+#endif/*
  * Copyright (c) 2022 EdgeImpulse Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -216,6 +249,54 @@ bool EiDeviceSonySpresense::start_sample_thread(void (*sample_read_cb)(void), fl
     return true;
 }
 
+#if MULTI_FREQ_ENABLED == 1
+/**
+ * @brief 
+ * 
+ * @param sample_multi_read_cb 
+ * @param multi_sample_interval_ms 
+ * @param num_fusioned 
+ * @return true 
+ * @return false 
+ */
+bool EiDeviceSonySpresense::start_multi_sample_thread(void (*sample_multi_read_cb)(uint8_t), float* multi_sample_interval_ms, uint8_t num_fusioned)
+{
+    uint8_t i;
+    uint8_t flag = 0;
+
+    this->sample_multi_read_callback = sample_multi_read_cb;
+    this->fusioning = num_fusioned;
+    this->multi_sample_interval.clear();
+
+    for (i = 0; i < num_fusioned; i++){
+        this->multi_sample_interval.push_back(1.f/multi_sample_interval_ms[i]*1000.f);
+    }
+
+    this->sample_interval = ei_fusion_calc_multi_gcd(this->multi_sample_interval.data(), this->fusioning);
+
+    /* force first reading */
+    for (i = 0; i < this->fusioning; i++){
+            flag |= (1<<i);
+    }
+    this->sample_multi_read_callback(flag);
+
+    this->actual_timer = 0;
+    // start thread !
+
+    int ret = ei_timer_init(&local_multi_sample_thread, (uint32_t)this->sample_interval * 1000);
+
+    if (ret != 0) {
+        ei_printf("Error in ei_timer_init %d", ret);
+        return false;
+    }
+
+    this->sample_interval_ms = sample_interval;
+    this->is_sampling = true;
+
+    return true;
+}
+#endif
+
 /**
  * @brief 
  * 
@@ -331,7 +412,7 @@ unsigned int local_sample_thread(void)
         dev->sample_read_callback();
     }
 
-    if (dev->get_is_sampling() == true) {        
+    if (dev->get_is_sampling() == true) {
         next_interval =  (dev->get_sample_interval_ms() * 1000);
     }
     else {
@@ -340,3 +421,40 @@ unsigned int local_sample_thread(void)
 
     return next_interval;
 }
+
+#if MULTI_FREQ_ENABLED == 1
+/**
+ * @brief 
+ * 
+ * @return unsigned int 
+ */
+unsigned int local_multi_sample_thread(void)
+{
+    unsigned int next_interval = 0;
+    EiDeviceSonySpresense *dev = static_cast<EiDeviceSonySpresense*>(EiDeviceInfo::get_device());
+
+    uint8_t flag = 0;
+    uint8_t i = 0;
+    
+    dev->actual_timer += dev->get_sample_interval();  /* update actual time */
+
+    for (i = 0; i < dev->get_fusioning(); i++){
+        if (((uint32_t)(dev->actual_timer % (uint32_t)dev->multi_sample_interval.at(i))) == 0) {   /* check if period of sensor is a multiple of actual time*/
+            flag |= (1<<i);                                                                     /* if so, time to sample it! */
+        }
+    }
+
+    if (dev->sample_multi_read_callback != nullptr){
+        dev->sample_multi_read_callback(flag);        
+    }
+
+    if (dev->get_is_sampling() == true) {
+        next_interval =  (dev->get_sample_interval() * 1000);
+    }
+    else {
+
+    }
+
+    return next_interval;
+}
+#endif

@@ -1,5 +1,5 @@
 /* Edge Impulse ingestion SDK
- * Copyright (c) 2020 EdgeImpulse Inc.
+ * Copyright (c) 2023 EdgeImpulse Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -21,40 +21,46 @@
  */
 
 /* Include ----------------------------------------------------------------- */
-#include <stdint.h>
-#include <stdlib.h>
+#include "ei_pressure.h"
+#include "Lps22hh.h"
 #include "edge-impulse-sdk/porting/ei_classifier_porting.h"
 
 #include "ei_config_types.h"
-#include "ei_inertialsensor.h"
-#include "ei_device_sony_spresense.h"
-#include "ei_board_ctrl.h"
 
 /* Constant defines -------------------------------------------------------- */
-#define CONVERT_G_TO_MS2    9.80665f
 
 /* Private variables ------------------------------------------------------- */
-static float imu_data[N_AXIS_SAMPLED];
+static float lps_data[PRESSURE_AXIS_SAMPLED];
 
 /**
- * @brief      Setup payload header
- *
- * @return     true
+ * @brief 
+ * 
+ * @return true 
+ * @return false 
  */
-bool ei_inertial_init(void)
+bool ei_pressure_init(void)
 {
-    if (spresense_init_acc() == true) {
-        if(ei_add_sensor_to_fusion_list(imu_sensor) == false) {
-            ei_printf("ERR: failed to register Inertial KX126 sensor!\r\n");
-            return false;
-        }
+    bool initialised = false;
+    uint8_t lps22_whoamI = 0;
+
+    /* Check device ID */
+    lps22_whoamI = 0;
+    lps22hh_device_id_get(nullptr, &lps22_whoamI);
+
+    if (lps22_whoamI == LPS22HH_ID) {
+        (void)lps22hh_init(); // we already checked if sensor is present
+
+        /* Set Output Data Rate - different from default */
+        lps22hh_data_rate_set(nullptr, LPS22HH_75_Hz_LOW_NOISE);
+
+        ei_add_sensor_to_fusion_list(pressure_sensor);
+        initialised = true;
     }
     else {
-        ei_printf("Accelerometer (KX126) missing or not working correctly\r\n");
-        return false;
+        ei_printf("LPS22HH pressure sensor not found!\n");
     }
 
-    return true;
+    return initialised;
 }
 
 /**
@@ -63,27 +69,26 @@ bool ei_inertial_init(void)
  * @param n_samples 
  * @return float* 
  */
-float *ei_fusion_inertial_read_data(int n_samples)
-{    
-    memset(imu_data, 0, sizeof(imu_data));
+float *ei_fusion_pressure_read_data(int n_samples)
+{
+    lps22hh_reg_t reg;
+    static uint32_t data_raw_pressure = 0;
+    static int16_t lps22_data_raw_temperature = 0;
 
-    if (n_samples >= 3){    /* acc */
-        spresense_getAcc(imu_data);
+    memset(&lps_data, 0x00, sizeof(lps_data));
 
-        for (int i = 0; i < 3; i++) {            
-            imu_data[i] *= CONVERT_G_TO_MS2;
-        }
+    /* Read output only if new value is available */
+    lps22hh_read_reg(nullptr, LPS22HH_STATUS, (uint8_t *)&reg, 1);
+
+    if (reg.status.p_da) {
+        lps22hh_pressure_raw_get(nullptr, (uint8_t *)&data_raw_pressure);
+        lps_data[0] = (lps22hh_from_lsb_to_hpa(data_raw_pressure) / 10.0);
     }
 
-#if 0
-    if (n_samples >= 6){    /* gyr */
-
+    if (reg.status.t_da) {
+        lps22hh_temperature_raw_get(nullptr, (uint8_t *)&lps22_data_raw_temperature);
+        lps_data[1] = lps22hh_from_lsb_to_celsius(lps22_data_raw_temperature);
     }
 
-    if (n_samples >= 9){    /* mag */
-
-    }
-#endif
-
-    return imu_data;
+    return lps_data;
 }

@@ -21,7 +21,10 @@
 #include <arch/board/cxd56_gpioif.h>
 #include <chip/hardware/cxd5602_memorymap.h>
 #include <chip/cxd56_uart.h>
+#include <arch/chip/scu.h>
+#include <arch/chip/adc.h>
 #include <sys/boardctl.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stddef.h>
 #include <time.h>
@@ -34,6 +37,10 @@
 #define CONSOLE_BASE    CXD56_UART1_BASE
 
 #define BOARD_FCLKOUT_FREQUENCY   (100000000)
+
+#define ADC_RANGE_MIN             0.0f
+#define ADC_RANGE_MAX             5.0f
+
 /* UART clocking ***********************************************************/
 #define BOARD_UART1_BASEFREQ        BOARD_FCLKOUT_FREQUENCY
 
@@ -41,7 +48,8 @@
 
 
 /* Private functions ------------------------------------------------------- */
-
+static float adc_map(int16_t x, int16_t in_min, int16_t in_max,
+                     float out_min, float out_max);
 
 /* Public functions ------------------------------------------------------- */
 /**
@@ -182,4 +190,80 @@ void spresense_time_cb(uint32_t *sec, uint32_t *nano)
     *(nano)= cur_time.tv_nsec;
 }
 
+#define ADC_CHANNEL     "/dev/hpadc0"
+int adc_fd = 0;
+
+/**
+ * @brief 
+ * 
+ */
+uint32_t spresense_adc_init(void)
+{
+    int ret;
+    int errval = 0;
+
+    if (!adc_fd) {
+
+        adc_fd = open(ADC_CHANNEL, O_RDONLY);
+        if (adc_fd < 0) {
+        printf("open error:%d,%d\n", adc_fd, errno);
+        return -ENODEV;
+        }
+
+        ret = ioctl(adc_fd, SCUIOC_SETFIFOMODE, 1);
+        if (ret < 0) {
+            errval = errno;
+            printf("ioctl(SETFIFOMODE) failed: %d\n", errval);
+            return 1; // maybe an error code ?
+        }
+
+        if (ioctl(adc_fd, ANIOC_CXD56_FIFOSIZE, 2) < 0) {
+            printf("ioctl(FIFOSIZE) failed: %d\n", errno);
+            return 2;
+        }
+
+        ret = ioctl(adc_fd, ANIOC_CXD56_START, 0);
+        if (ret < 0) {
+            errval = errno;
+            return 3;
+        }
+    }
+
+    return 0;
+}
+
+/**
+ * @brief 
+ * 
+ * @return uint16_t 
+ */
+float spresense_adc_read(void)
+{
+    int16_t adc_read = -1;
+    float value = 0.0;
+    ssize_t nbytes;
+
+    if (adc_fd) {
+        nbytes = read(adc_fd, &adc_read, sizeof(int16_t));
+        value = adc_map(adc_read, INT16_MIN, INT16_MAX, ADC_RANGE_MIN, ADC_RANGE_MAX);       
+    }
+
+    return value;
+}
+
 /* Private functions ------------------------------------------------------- */
+/**
+ * @brief 
+ * 
+ * @param x 
+ * @param in_min 
+ * @param in_max 
+ * @param out_min 
+ * @param out_max 
+ * @return float 
+ */
+static float adc_map(int16_t x, int16_t in_min, int16_t in_max,
+                     float out_min, float out_max)
+{
+  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+}

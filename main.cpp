@@ -20,6 +20,7 @@
 #include <sys/boardctl.h>
 #include <hardware/cxd5602_memorymap.h>
 #include "ei_board.h"
+#include "I2c.h"
 
 /* Extern reference -------------------------------------------------------- */
 extern int ei_main();
@@ -78,6 +79,7 @@ extern "C" int spresense_main(void)
     up_cxxinitialize();
 #endif
     spresense_board_init();
+    i2c_init();
 
     ei_main();
 

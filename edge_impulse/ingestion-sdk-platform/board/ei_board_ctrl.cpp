@@ -29,8 +29,10 @@ bool spresense_init_acc(void)
     uint8_t rc = kx126.init();
     
     if (rc != 0) {
+        Wire.end();
         return false;        
     }
+    
     return true;
 }
 

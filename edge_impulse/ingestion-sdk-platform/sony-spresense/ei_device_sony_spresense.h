@@ -58,8 +58,15 @@ public:
     bool get_is_sampling(void) {
         return is_sampling;
     }
+
+#if MULTI_FREQ_ENABLED == 1
+	bool start_multi_sample_thread(void (*sample_multi_read_cb)(uint8_t), float* multi_sample_interval_ms, uint8_t num_fusioned) override;		
+#endif
 };
 
 unsigned int local_sample_thread(void);
+#if MULTI_FREQ_ENABLED == 1
+unsigned int local_multi_sample_thread(void);
+#endif
 
 #endif /* EI_DEVICE_TEMPLATE_H_ */

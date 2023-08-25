@@ -42,6 +42,8 @@ extern void spresense_puts(const char *str);
 extern char spresense_getchar(void);
 extern void spresense_uart_flush(void);
 extern void spresense_time_cb(uint32_t *sec, uint32_t *nano);
+extern uint32_t spresense_adc_init(void);
+extern float spresense_adc_read(void);
 
 #ifdef __cplusplus
 }

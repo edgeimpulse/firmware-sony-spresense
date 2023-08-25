@@ -36,6 +36,7 @@ static inference_state_t state = INFERENCE_STOPPED;
 static uint64_t last_inference_ts = 0;
 static bool continuous_mode = false;
 static bool debug_mode = false;
+static bool is_fusion = false;
 static float samples_circ_buff[EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE];
 static int samples_wr_index = 0;
 
@@ -113,7 +114,16 @@ void ei_run_impulse(void)
             }
             ei_printf("Recording\n");
             state = INFERENCE_SAMPLING;
+#if MULTI_FREQ_ENABLED == 1
+            if (is_fusion) {
+            	ei_multi_fusion_sample_start(&samples_callback, EI_CLASSIFIER_INTERVAL_MS);
+            }
+            else {
+            	ei_fusion_sample_start(&samples_callback, EI_CLASSIFIER_INTERVAL_MS);
+            }
+#else
             ei_fusion_sample_start(&samples_callback, EI_CLASSIFIER_INTERVAL_MS);
+#endif
             dev->set_state(eiStateSampling);
             return;
         case INFERENCE_SAMPLING:
@@ -213,6 +223,12 @@ void ei_start_impulse(bool continuous, bool debug, bool use_max_uart_speed)
 
     dev->set_sample_length_ms(EI_CLASSIFIER_RAW_SAMPLE_COUNT * EI_CLASSIFIER_INTERVAL_MS);
     dev->set_sample_interval_ms(EI_CLASSIFIER_INTERVAL_MS);
+
+#if MULTI_FREQ_ENABLED == 1
+    is_fusion = ei_is_fusion();
+#else
+    is_fusion = false;
+#endif
 
     if (continuous == true) {
         samples_per_inference = EI_CLASSIFIER_SLICE_SIZE * EI_CLASSIFIER_RAW_SAMPLES_PER_FRAME;

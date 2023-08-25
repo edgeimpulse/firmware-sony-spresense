@@ -45,6 +45,7 @@ INC_SPR += \
 	-I libraries/File \
 	-I libraries/Wire \
 	-I libraries/KXxx \
+	-I libraries/I2c \
 
 INC_APP += \
 	-I$(BUILD) \
@@ -82,6 +83,13 @@ INC_APP += \
 	-I edge_impulse/firmware-sdk/jpeg \
 	-I edge_impulse/tflite-model \
 	-I sensors_sony_includes \
+	-I libraries/Apds9250 \
+	-I libraries/Hts221 \
+	-I libraries/Lis2mdl \
+	-I libraries/Lps22hh \
+	-I libraries/Lsm6dso32 \
+	-I libraries/Sgp4x \
+	-I libraries/Vl53l1x \
 
 CFLAGS += \
 	-DCONFIG_WCHAR_BUILTIN \
@@ -155,6 +163,7 @@ LDFLAGS = \
 	$(SPRESENSE_SDK)/nuttx/libs/libsched.a \
 	$(SPRESENSE_SDK)/nuttx/libs/libxx.a \
 	$(LIBGCC) \
+	$(LIBM) \
 	$(LIBSTDC) \
 	--end-group \
 	-L$(BUILD) \
@@ -180,6 +189,7 @@ SRC_SPR_CXX += \
 	Wire.cpp \
 	KX126.cpp \
 	ei_camera_driver_sony.cpp \
+	I2c.cpp \
 	ei_board_ctrl.cpp
 
 SRC_SPR_C += \
@@ -198,9 +208,17 @@ SRC_APP_CXX += \
 	$(notdir $(wildcard edge_impulse/edge-impulse-sdk/dsp/image/*.cpp )) \
 	$(notdir $(wildcard edge_impulse/inference/*.cpp)) \
 	$(notdir $(wildcard edge_impulse/ingestion-sdk-platform/sensors/*.cpp)) \
+	$(notdir $(wildcard edge_impulse/ingestion-sdk-platform/sensors/commonsense/*.cpp)) \
 	$(notdir $(wildcard edge_impulse/ingestion-sdk-platform/sony-spresense/*.cpp)) \
 	$(notdir $(wildcard edge_impulse/ingestion-sdk-c/*.cpp)) \
 	$(notdir $(wildcard edge_impulse/tflite-model/*.cpp)) \
+	$(notdir $(wildcard libraries/Apds9250/*.cpp)) \
+	$(notdir $(wildcard libraries/Hts221/*.cpp)) \
+	$(notdir $(wildcard libraries/Lis2mdl/*.cpp)) \
+	$(notdir $(wildcard libraries/Lps22hh/*.cpp)) \
+	$(notdir $(wildcard libraries/Lsm6dso32/*.cpp)) \
+	$(notdir $(wildcard libraries/Sgp4x/*.cpp)) \
+	$(notdir $(wildcard libraries/Vl53l1x/*.cpp)) \
 
 SRC_APP_CC += \
 	$(notdir $(wildcard edge_impulse/edge-impulse-sdk/tensorflow/lite/kernels/*.cc)) \
@@ -239,6 +257,7 @@ VPATH += stdlib \
 	edge_impulse/ingestion-sdk-platform/board \
 	edge_impulse/ingestion-sdk-platform/peripheral \
 	edge_impulse/ingestion-sdk-platform/sensors \
+	edge_impulse/ingestion-sdk-platform/sensors/commonsense \
 	edge_impulse/ingestion-sdk-platform/sony-spresense \
 	edge_impulse/QCBOR/src \
 	edge_impulse/edge-impulse-sdk/dsp/dct \
@@ -271,7 +290,15 @@ VPATH += stdlib \
 	libraries/MemoryUtil \
 	libraries/File \
 	libraries/Wire \
-	libraries/KXxx
+	libraries/KXxx \
+	libraries/Apds9250 \
+	libraries/Hts221 \
+	libraries/I2c \
+	libraries/Lis2mdl \
+	libraries/Lps22hh \
+	libraries/Lsm6dso32 \
+	libraries/Sgp4x \
+	libraries/Vl53l1x \
 
 OBJ = $(addprefix $(BUILD)/spr/, $(SRC_SPR_CXX:.cpp=.o))
 OBJ += $(addprefix $(BUILD)/spr/, $(SRC_SPR_C:.c=.o))
@@ -282,7 +309,13 @@ OBJ += $(addprefix $(BUILD)/app/, $(SRC_APP_C:.c=.o))
 CFLAGS += $(APPFLAGS)
 CXXFLAGS += $(APPFLAGS)
 
-all: $(BUILD)/firmware.spk
+all: build_spk
+
+commonsense: CXXFLAGS += -DCOMMONSENSE
+commonsense: CFLAGS += -DCOMMONSENSE
+commonsense: build_spk
+
+build_spk: $(BUILD)/firmware.spk
 
 $(BUILD)/%.o: %.c
 	@"$(CC)" $(CXXFLAGS) -c -o $@ $<

@@ -13,7 +13,8 @@ Edge Impulse enables developers to create the next generation of intelligent dev
 #### Optional add-ons:
 
 * [Spresense Extension board](https://eu.mouser.com/ProductDetail/Sony-Spresense/CXD5602PWBEXT1_FG_875607608_P?qs=sGAEpiMZZMu3sxpa5v1qrpe%2F9%2FddSq0jgeEkn3phnwE=) - to connect external sensors.
-* [CXD5602PWBCAM1 camera add-on](https://nl.mouser.com/ProductDetail/Sony-Spresense/CXD5602PWBCAM1_FG_875607605_P?qs=sGAEpiMZZMu3sxpa5v1qrpe%2F9%2FddSq0jwhSPmsfM3%252Bc%3D) - if you want to add sight to your Spresense.
+* [CXD5602PWBCAM1 camera add-on](https://developer.sony.com/spresense/development-guides/introduction_en.html#_camera_board) - if you want to add sight to your Spresense.
+* [CXD5602PWBCAM2W HDR camera add-on](https://developer.sony.com/spresense/development-guides/introduction_en.html#_hdr_camera_board) - if you want to add sight to your Spresense.
 * [Spresense Sensor EVK-70 add-on with an accelerometer](https://www.chip1stop.com/USA/en/view/dispDetail/DispDetail?partId=ROHM-0170579&cid=c1s_sony_spresense_SPRESENSE-SENSOR-EVK-701) - if you plan on building models that depend on motion.
 * [Spresense Wi-Fi / iS110B module](https://www.chip1stop.com/product/detail?partId=IDYC-0000001&cid=c1s_sony_spresense_wifi) - for wireless connectivity.
 

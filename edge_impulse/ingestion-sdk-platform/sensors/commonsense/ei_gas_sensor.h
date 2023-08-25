@@ -1,5 +1,5 @@
 /* Edge Impulse ingestion SDK
- * Copyright (c) 2020 EdgeImpulse Inc.
+ * Copyright (c) 2023 EdgeImpulse Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,8 +20,8 @@
  * SOFTWARE.
  */
 
-#ifndef EI_INERTIAL_SENSOR
-#define EI_INERTIAL_SENSOR
+#ifndef EI_GAS_SENSOR_
+#define EI_GAS_SENSOR_
 
 /* Include ----------------------------------------------------------------- */
 #include "firmware-sdk/ei_fusion.h"
@@ -29,23 +29,22 @@
 /** Number of axis used and sample data format */
 typedef float sample_format_t;
 
-#define N_AXIS_SAMPLED			3
-#define SIZEOF_N_AXIS_SAMPLED	(sizeof(sample_format_t) * N_AXIS_SAMPLED)
+#define GAS_AXIS_SAMPLED 1
 
 /* Function prototypes ----------------------------------------------------- */
-bool ei_inertial_init(void);
-float *ei_fusion_inertial_read_data(int n_samples);
+bool ei_gas_init(void);
+float *ei_fusion_gas_read_data(int n_samples);
 
-static const ei_device_fusion_sensor_t imu_sensor = {
-    "Inertial",
+static const ei_device_fusion_sensor_t gas_sensor = {
+    "Gas sensor",
     // number of sensor module axis
-    N_AXIS_SAMPLED,
+    GAS_AXIS_SAMPLED,
     // sampling frequencies
-    { 62.5f, 100.0f , 250.0f, 500.0f},
-    // axis name and units payload (must be same order as read in)    
-    { {"accX", "m/s2"}, {"accY", "m/s2"}, {"accZ", "m/s2"} },
+    { 1.0f, 12.5f },
+    // axis name and units payload (must be same order as read in)
+    { { "VoC_Level", "level" } },
     // reference to read data function
-    &ei_fusion_inertial_read_data,
+    &ei_fusion_gas_read_data,
     0
 };
 

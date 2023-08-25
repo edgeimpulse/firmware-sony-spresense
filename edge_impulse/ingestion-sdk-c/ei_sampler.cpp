@@ -41,7 +41,8 @@ static bool create_header(sensor_aq_payload_info *payload);
 static void ei_write_last_data(void);
 
 /* Private variables ------------------------------------------------------- */
-static uint32_t samples_required;
+static uint32_t total_sample_length_ms;
+static uint32_t sample_interval_ms;
 static uint32_t current_sample;
 static uint32_t sample_buffer_size;
 static uint32_t headerOffset = 0;
@@ -89,8 +90,10 @@ bool ei_sampler_start_sampling(void *v_ptr_payload, starter_callback ei_sample_s
         return false;
     }
 
-    samples_required = (uint32_t)((dev->get_sample_length_ms()) / dev->get_sample_interval_ms());
-    sample_buffer_size = (samples_required * sample_size) * 2;  // TODO 4 ?
+    total_sample_length_ms = (uint32_t)((float)dev->get_sample_length_ms());
+    sample_interval_ms = (uint32_t)dev->get_sample_interval_ms();
+
+    sample_buffer_size = (total_sample_length_ms * sample_size) * 2;  // TODO 4 ?
     current_sample = 0;
 
     // Minimum delay of 2000 ms for daemon
@@ -121,14 +124,7 @@ bool ei_sampler_start_sampling(void *v_ptr_payload, starter_callback ei_sample_s
     }
 
 	ei_printf("Sampling...\n");
-    while(current_sample < samples_required) {
-        #if 0
-        if (ei_inertial_read_data() != 0) {
-            ei_printf("ERR: Failed to get data, is your accelerometer connected?\r\n");
-            sampling_failed = true;
-            break;
-        }
-        #endif
+    while(current_sample < total_sample_length_ms) {
         ei_sleep(50);
         //dev->sample_thread();
     };
@@ -204,7 +200,7 @@ bool ei_sampler_start_sampling(void *v_ptr_payload, starter_callback ei_sample_s
     }
 #endif
 
-    ei_printf("Done sampling, total bytes collected: %lu\n", samples_required);
+    ei_printf("Done sampling, total bytes collected: %lu\n", total_sample_length_ms);
     ei_printf("[1/1] Uploading file to Edge Impulse...\n");
     ei_printf("Not uploading file, not connected to WiFi. Used buffer, from=0, to=%lu.\n", write_addr + headerOffset);
     ei_printf("OK\n");
@@ -274,8 +270,9 @@ static bool create_header(sensor_aq_payload_info *payload)
 static bool sample_data_callback(const void *sample_buf, uint32_t byteLenght)
 {
     sensor_aq_add_data(&ei_sensor_ctx, (float *)sample_buf, byteLenght / sizeof(float));
+    current_sample += sample_interval_ms;
 
-    if (++current_sample >= samples_required) {
+    if(current_sample > total_sample_length_ms) {
         return true;
     }
     else {
