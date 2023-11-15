@@ -33,15 +33,15 @@
 
 #include "ei_config_types.h"
 #include "sensor_aq_mbedtls_hs256.h"
-#include "sensor_aq_none.h"
+#include "firmware-sdk/sensor-aq/sensor_aq_none.h"
 
 /* Audio sampling config */
-#define AUDIO_SAMPLING_FREQUENCY            16000
-#define AUDIO_SAMPLES_PER_MS                (AUDIO_SAMPLING_FREQUENCY / 1000)
-#define AUDIO_DSP_SAMPLE_LENGTH_MS          16
-#define AUDIO_DSP_SAMPLE_RESOLUTION         (sizeof(short))
-#define AUDIO_DSP_SAMPLE_BUFFER_SIZE        1600//(AUDIO_SAMPLES_PER_MS * AUDIO_DSP_SAMPLE_LENGTH_MS * AUDIO_DSP_SAMPLE_RESOLUTION)
-
+//#define AUDIO_SAMPLING_FREQUENCY            16000
+//#define AUDIO_SAMPLES_PER_MS                (AUDIO_SAMPLING_FREQUENCY / 1000)
+//#define AUDIO_DSP_SAMPLE_LENGTH_MS          16
+//#define AUDIO_DSP_SAMPLE_RESOLUTION         (sizeof(short))
+//#define AUDIO_DSP_SAMPLE_BUFFER_SIZE        1600//(AUDIO_SAMPLES_PER_MS * AUDIO_DSP_SAMPLE_LENGTH_MS * AUDIO_DSP_SAMPLE_RESOLUTION)
+#define AUDIO_DSP_SAMPLE_BUFFER_SIZE        4800
 
 /** Status and control struct for inferencing struct */
 typedef struct {
@@ -76,6 +76,8 @@ static bool record_ready = false;
 static uint32_t headerOffset;
 static uint32_t samples_required;
 static uint32_t current_sample;
+static uint32_t cbor_current_sample;
+static uint8_t n_audio_channels = 4;
 
 static inference_t inference;
 
@@ -90,9 +92,7 @@ static sensor_aq_ctx ei_mic_ctx = {
     NULL,
 };
 
-// static QueueHandle_t frameEv = NULL;
 static int16_t audio_buffer[AUDIO_DSP_SAMPLE_BUFFER_SIZE];
-// static tPdmcfg sPdmcfg;
 
 static bool ei_microphone_record(uint32_t sample_length_ms, uint32_t start_delay_ms, bool print_start_messages);
 static void audio_buffer_callback(void *buffer, uint32_t n_bytes);
@@ -116,28 +116,42 @@ void ei_microphone_init(void)
  * @return true 
  * @return false 
  */
-bool ei_microphone_inference_start(uint32_t n_samples)
+bool ei_microphone_inference_start(uint32_t n_samples, uint8_t n_channels_inference, uint32_t freq)
 {
+    int retval = 0;
 
-    inference.buffers[0] = (int16_t *)ei_malloc(n_samples * sizeof(int16_t));
-
-    if (inference.buffers[0] == NULL) {
+    if (n_channels_inference > EI_AUDIO_N_CHANNELS) {
+        ei_printf("Wrong number of channels\r\n");
         return false;
     }
 
-    inference.buffers[1] = (int16_t *)ei_malloc(n_samples * sizeof(int16_t));
+    n_audio_channels = n_channels_inference;
+
+    inference.buffers[0] = (int16_t *)ei_malloc(n_samples * sizeof(int16_t) * n_audio_channels);
+
+    if (inference.buffers[0] == NULL) {
+        ei_printf("Can't allocate first audio buffer\r\n");
+        return false;
+    }
+
+    inference.buffers[1] = (int16_t *)ei_malloc(n_samples * sizeof(int16_t) * n_audio_channels);
 
     if (inference.buffers[1] == NULL) {
         ei_free(inference.buffers[0]);
+        ei_printf("Can't allocate second audio buffer\r\n");
         return false;
     }
 
     inference.buf_select = 0;
     inference.buf_count = 0;
-    inference.n_samples = n_samples;
+    inference.n_samples = n_samples;    // this represents the number of samples per channel
     inference.buf_ready = 0;
 
-    spresense_startStopAudio(true);
+    retval = spresense_startStopAudio(true, n_audio_channels, freq);
+    if (retval != 0) {
+        ei_printf("Error in spresense_startStopAudio: %d\r\n", retval);
+        return false;
+    }
 
     return true;
 }
@@ -204,11 +218,35 @@ int ei_microphone_audio_signal_get_data(size_t offset, size_t length, float *out
 bool ei_microphone_inference_end(void)
 {
     record_ready = false;
-    spresense_startStopAudio(false);
+    spresense_startStopAudio(false, n_audio_channels, 0);   // when stopping freq not important
 
     ei_free(inference.buffers[0]);
     ei_free(inference.buffers[1]);
     return true;
+}
+
+bool ei_microphone_1ch_start(void)
+{
+    n_audio_channels = 1;
+    return ei_microphone_sample_start();
+}
+
+bool ei_microphone_2ch_start(void)
+{
+    n_audio_channels = 2;
+    return ei_microphone_sample_start();
+}
+
+bool ei_microphone_3ch_start(void)
+{
+    n_audio_channels = 3;
+    return ei_microphone_sample_start();
+}
+
+bool ei_microphone_4ch_start(void)
+{
+    n_audio_channels = 4;
+    return ei_microphone_sample_start();
 }
 
 /**
@@ -243,6 +281,7 @@ bool ei_microphone_sample_start(void)
     }
 
     current_sample = 0;
+    cbor_current_sample = 0;
 
     bool r = ei_microphone_record(dev->get_sample_length_ms(), (((samples_required <<1)/ mem->block_size) * mem->block_erase_time), true);
     if (!r) {
@@ -255,7 +294,11 @@ bool ei_microphone_sample_start(void)
         get_dsp_data(&audio_buffer_callback);
     };
 
-    spresense_startStopAudio(false);
+    spresense_startStopAudio(false, n_audio_channels, 0);   // when stopping freq not important
+
+    /* Write end of cbor + dummy */
+    const uint8_t end_of_cbor[] = {0xff, 0xff, 0xff, 0xff};
+    mem->write_sample_data((uint8_t*)end_of_cbor, headerOffset + cbor_current_sample, 4);
 
     int ctx_err =
         ei_mic_ctx.signature_ctx->finish(ei_mic_ctx.signature_ctx, ei_mic_ctx.hash_buffer.buffer);
@@ -265,64 +308,10 @@ bool ei_microphone_sample_start(void)
     }
 
     mem->close_sample_file();
-#if 0
-    // load the first page in flash...
-    uint8_t *page_buffer = (uint8_t *)ei_malloc(mem->block_size);
-    if (!page_buffer) {
-        ei_printf("Failed to allocate a page buffer to write the hash\n");
-        return false;
-    }
-
-    int j = mem->read_sample_data(page_buffer, 0, mem->block_size);
-    if (j != mem->block_size) {
-        ei_printf("Failed to read first page (%d)\n", j);
-        ei_free(page_buffer);
-        return false;
-    }
-
-    // update the hash
-    uint8_t *hash = ei_mic_ctx.hash_buffer.buffer;
-    // we have allocated twice as much for this data (because we also want to be able to represent in hex)
-    // thus only loop over the first half of the bytes as the signature_ctx has written to those
-    for (size_t hash_ix = 0; hash_ix < ei_mic_ctx.hash_buffer.size / 2; hash_ix++) {
-        // this might seem convoluted, but snprintf() with %02x is not always supported e.g. by newlib-nano
-        // we encode as hex... first ASCII char encodes top 4 bytes
-        uint8_t first = (hash[hash_ix] >> 4) & 0xf;
-        // second encodes lower 4 bytes
-        uint8_t second = hash[hash_ix] & 0xf;
-
-        // if 0..9 -> '0' (48) + value, if >10, then use 'a' (97) - 10 + value
-        char first_c = first >= 10 ? 87 + first : 48 + first;
-        char second_c = second >= 10 ? 87 + second : 48 + second;
-
-        page_buffer[ei_mic_ctx.signature_index + (hash_ix * 2) + 0] = first_c;
-        page_buffer[ei_mic_ctx.signature_index + (hash_ix * 2) + 1] = second_c;
-    }
-
-    mem->close_sample_file();
-
-    j = mem->erase_sample_data(0, mem->block_size);
-    if (j != mem->block_size) {
-        ei_printf("Failed to erase first page (%d)\n", j);
-        ei_free(page_buffer);
-        return false;
-    }
-
-    j = mem->write_sample_data(page_buffer, 0, mem->block_size);
-
-    ei_free(page_buffer);
-
-    mem->close_sample_file();
-
-    if (j != 0) {
-        ei_printf("Failed to write first page with updated hash (%d)\n", j);
-        return false;
-    }
-#endif
 
     ei_printf("Done sampling, total bytes collected: %lu\n", current_sample);
     ei_printf("[1/1] Uploading file to Edge Impulse...\n");
-    ei_printf("Not uploading file, not connected to WiFi. Used buffer, from=0, to=%lu.\n", current_sample + headerOffset);
+    ei_printf("Not uploading file, not connected to WiFi. Used buffer, from=0, to=%lu.\n", cbor_current_sample + 1 + headerOffset);
     ei_printf("OK\n");
 
     return true;
@@ -343,6 +332,7 @@ static bool ei_microphone_record(uint32_t sample_length_ms, uint32_t start_delay
 {
     EiDeviceSonySpresense* dev = static_cast<EiDeviceSonySpresense*>(EiDeviceSonySpresense::get_device());
     EiFlashMemory* mem = static_cast<EiFlashMemory*>(dev->get_memory());
+    uint32_t freq = roundf(1.0/(dev->get_sample_interval_ms()))*1000;
     
     sensor_aq_payload_info payload = {
         dev->get_device_id().c_str(),
@@ -351,6 +341,16 @@ static bool ei_microphone_record(uint32_t sample_length_ms, uint32_t start_delay
         { { "audio", "wav" } }
     };
 
+    if(n_audio_channels > 1) {
+        payload.sensors[1] = { "audio2", "wav"};
+    }
+    if(n_audio_channels > 2) {
+        payload.sensors[2] = { "audio3", "wav"};
+    }
+    if(n_audio_channels > 3) {
+        payload.sensors[3] = { "audio4", "wav"};
+    }
+
     dev->set_state(eiStateErasingFlash);
 
     if (print_start_messages) {
@@ -358,8 +358,8 @@ static bool ei_microphone_record(uint32_t sample_length_ms, uint32_t start_delay
             "Starting in %lu ms... (or until all flash was erased)\n",
             start_delay_ms < 2000 ? 2000 : start_delay_ms);
     }
-
-    if (!spresense_startStopAudio(true)) {
+        
+    if (!spresense_startStopAudio(true, n_audio_channels, freq)) {
         ei_printf("\r\nERR: Missing DSP binary. Follow steps here https://developer.sony.com/develop/spresense/docs/arduino_tutorials_en.html#_install_dsp_files\r\n");
         return false;
     }
@@ -370,7 +370,7 @@ static bool ei_microphone_record(uint32_t sample_length_ms, uint32_t start_delay
     
     if (mem->erase_sample_data(0, mem->block_size) != 0) {
         ei_printf("Error in erase_sample_data\n");
-        spresense_startStopAudio(false);
+        spresense_startStopAudio(false, n_audio_channels, 0);   // when stopping freq not important
         return false;
     }
     mem->close_sample_file();
@@ -387,6 +387,27 @@ static bool ei_microphone_record(uint32_t sample_length_ms, uint32_t start_delay
 }
 
 /**
+ * Convert to CBOR int16 format and write to buf
+*/
+static void write_value_to_cbor_buffer(uint8_t *buf, int16_t value)
+{
+    uint8_t datatype;
+    uint16_t sample;
+    if(value < 0) {
+        datatype = 0x39;
+        /* Convert from 2's complement */
+        sample = (uint16_t)~value + 1;
+    }
+    else {
+        datatype = 0x19;
+        sample = value;
+    }
+    buf[0] = datatype;
+    buf[1] = sample >> 8;
+    buf[2] = sample & 0xFF;
+}
+
+/**
  * @brief      Ingestion audio callback, write audio samples to memory
  *             Signal record_ready when all needed samples are there
  * @param      buffer   Pointer to source buffer
@@ -396,11 +417,38 @@ static void audio_buffer_callback(void *buffer, uint32_t n_bytes)
 {
     EiDeviceSonySpresense* dev = static_cast<EiDeviceSonySpresense*>(EiDeviceInfo::get_device());
     EiFlashMemory* mem = static_cast<EiFlashMemory*>(dev->get_memory());
-    
-    mem->write_sample_data((uint8_t*)buffer, headerOffset + current_sample, n_bytes);
 
-    ei_mic_ctx.signature_ctx->update(ei_mic_ctx.signature_ctx, (uint8_t*)buffer, n_bytes);
+    /* The number of bytes is divided over the number of sampled audio channels */
+    n_bytes /= n_audio_channels;
 
+    uint32_t n_samples = n_bytes / 2;
+    int16_t *sbuffer = (int16_t *)buffer;
+    uint32_t sbuf_ptr = 0;
+
+    /* Calculate the cbor buffer length: header + 3 bytes per audio channel */
+    uint32_t cbor_length = n_samples + ((n_samples + n_bytes) * n_audio_channels);
+    uint8_t *cbor_buf = (uint8_t *)ei_malloc(cbor_length);
+
+    if(cbor_buf == NULL) {
+        ei_printf("ERR: memory allocation error\r\n");
+        return;
+    }
+
+    for (int i = 0; i < n_samples; i++) {
+        uint32_t cval_ptr = i * ((n_audio_channels * 3) + 1);
+
+        cbor_buf[cval_ptr] = 0x80 + n_audio_channels;
+        for (int y = 0; y < n_audio_channels; y++) {
+            write_value_to_cbor_buffer(&cbor_buf[cval_ptr + 1 + (3 * y)], sbuffer[sbuf_ptr + y]);
+        }
+        sbuf_ptr += n_audio_channels;
+    }
+
+    mem->write_sample_data((uint8_t*)cbor_buf, headerOffset + cbor_current_sample, cbor_length);
+
+    ei_free(cbor_buf);
+
+    cbor_current_sample += cbor_length;
     current_sample += n_bytes;
     if (current_sample >= (samples_required << 1)) {
         record_ready = true;
@@ -417,15 +465,16 @@ static void audio_buffer_inference_callback(void *buffer, uint32_t n_bytes)
 {
     int16_t *samples = (int16_t *)buffer;
 
-    for(uint32_t i = 0; i < (n_bytes >> 1); i++) {
+    for (uint32_t i = 0; i < (n_bytes >> 1); i++) {
         inference.buffers[inference.buf_select][inference.buf_count++] = samples[i];
 
-        if (inference.buf_count >= inference.n_samples) {
+        if (inference.buf_count >= (inference.n_samples * n_audio_channels)) {  // n_samples is per channel
+
             inference.buf_select ^= 1;
             inference.buf_count = 0;
             inference.buf_ready = 1;
         }
-    }
+    }    
 }
 
 /**
@@ -440,33 +489,6 @@ static void get_dsp_data(void (*callback)(void *buffer, uint32_t n_bytes))
     if (spresense_getAudio((char *)&audio_buffer[0], &length)) {
         callback((void *)&audio_buffer[0], length);
     }
-}
-
-/**
- * @brief 
- * 
- * @param buffer 
- * @param hdrLength 
- * @return int 
- */
-static int insert_ref(char *buffer, int hdrLength)
-{
-#define EXTRA_BYTES(a) ((a & 0x3) ? 4 - (a & 0x3) : (a & 0x03))
-    const char *ref = "Ref-BINARY-i16";
-    int addLength = 0;
-    int padding = EXTRA_BYTES(hdrLength);
-
-    buffer[addLength++] = 0x60 + 14 + padding;
-    for (size_t i = 0; i < strlen(ref); i++) {
-        buffer[addLength++] = *(ref + i);
-    }
-    for (int i = 0; i < padding; i++) {
-        buffer[addLength++] = ' ';
-    }
-
-    buffer[addLength++] = 0xFF;
-
-    return addLength;
 }
 
 /**
@@ -503,15 +525,6 @@ static bool create_header(sensor_aq_payload_info *payload)
         ei_printf("Failed to find end of header\n");
         return false;
     }
-
-    int ref_size = insert_ref(((char*)ei_mic_ctx.cbor_buffer.ptr + end_of_header_ix), end_of_header_ix);
-    // and update the signature
-    ret = ei_mic_ctx.signature_ctx->update(ei_mic_ctx.signature_ctx, (uint8_t*)(ei_mic_ctx.cbor_buffer.ptr + end_of_header_ix), ref_size);
-    if (ret != 0) {
-        ei_printf("Failed to update signature from header (%d)\n", ret);
-        return false;
-    }
-    end_of_header_ix += ref_size;
 
     // Write to blockdevice
     ret = mem->write_sample_data((uint8_t*)ei_mic_ctx.cbor_buffer.ptr, 0, end_of_header_ix);

@@ -47,7 +47,7 @@ struct v_buffer *buffers_still = NULL;
 
 ei_device_snapshot_resolutions_t EiCameraSony::resolutions_isx012[] = {
         { .width = 96, .height = 64 },
-        //{ .width = 96, .height = 96 },
+        { .width = 96, .height = 96 },
         { .width = 160, .height = 120 },
         { .width = 320, .height = 240 },
 #if defined(EI_CLASSIFIER_SENSOR) && EI_CLASSIFIER_SENSOR == EI_CLASSIFIER_SENSOR_CAMERA

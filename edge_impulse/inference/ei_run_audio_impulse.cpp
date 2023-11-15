@@ -34,13 +34,12 @@ typedef enum {
 
 /* Private variables ------------------------------------------------------- */
 static int print_results;
-static uint16_t samples_per_inference;
 static inference_state_t state = INFERENCE_STOPPED;
 static uint64_t last_inference_ts = 0;
 static bool continuous_mode = false;
 static bool debug_mode = false;
-//static float samples_circ_buff[EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE];
 static int samples_wr_index = 0;
+static uint8_t inference_channels = 0;
 
 static void display_results(ei_impulse_result_t* result);
 /* ------------------------------------------------------------------------- */
@@ -48,9 +47,7 @@ static void display_results(ei_impulse_result_t* result);
  *
  */
 void ei_run_impulse(void)
-{
-    EiDeviceSonySpresense* dev = static_cast<EiDeviceSonySpresense*>(EiDeviceSonySpresense::get_device());
-
+{    
     switch(state) {
         case INFERENCE_STOPPED:
         {
@@ -97,8 +94,9 @@ void ei_run_impulse(void)
     }
 
     signal_t signal;
-
-    signal.total_length = continuous_mode ? EI_CLASSIFIER_SLICE_SIZE : EI_CLASSIFIER_RAW_SAMPLE_COUNT;
+        
+    signal.total_length = continuous_mode ? (EI_CLASSIFIER_SLICE_SIZE * ei_default_impulse.raw_samples_per_frame): ei_default_impulse.dsp_input_frame_size;
+    
     signal.get_data = &ei_microphone_audio_signal_get_data;
 
     // run the impulse: DSP, neural network and the Anomaly algorithm
@@ -146,6 +144,8 @@ void ei_start_impulse(bool continuous, bool debug, bool use_max_uart_speed)
     const float sample_length = 1000.0f * static_cast<float>(EI_CLASSIFIER_RAW_SAMPLE_COUNT) /
                         (1000.0f / static_cast<float>(EI_CLASSIFIER_INTERVAL_MS));
 
+    inference_channels = ei_default_impulse.raw_samples_per_frame;
+
     continuous_mode = continuous;
     debug_mode = debug;
 
@@ -154,7 +154,7 @@ void ei_start_impulse(bool continuous, bool debug, bool use_max_uart_speed)
     ei_printf("\tInterval: ");
     ei_printf_float(EI_CLASSIFIER_INTERVAL_MS);
     ei_printf("ms.");
-    ei_printf("\tFrame size: %d\n", EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE);
+    ei_printf("\tFrame size: %d\n", ei_default_impulse.dsp_input_frame_size);
     ei_printf("\tSample length: ");
     ei_printf_float(sample_length);
     ei_printf(" ms.");
@@ -163,7 +163,6 @@ void ei_start_impulse(bool continuous, bool debug, bool use_max_uart_speed)
     ei_printf("Starting inferencing, press 'b' to break\n");
 
     if (continuous == true) {
-        samples_per_inference = EI_CLASSIFIER_SLICE_SIZE * EI_CLASSIFIER_RAW_SAMPLES_PER_FRAME;
         // In order to have meaningful classification results, continuous inference has to run over
         // the complete model window. So the first iterations will print out garbage.
         // We now use a fixed length moving average filter of half the slices per model window and
@@ -173,14 +172,13 @@ void ei_start_impulse(bool continuous, bool debug, bool use_max_uart_speed)
         state = INFERENCE_SAMPLING;
     }
     else {
-        samples_per_inference = EI_CLASSIFIER_RAW_SAMPLE_COUNT * EI_CLASSIFIER_RAW_SAMPLES_PER_FRAME;
         // it's time to prepare for sampling
         ei_printf("Starting inferencing in 2 seconds...\n");
         last_inference_ts = ei_read_timer_ms();
         state = INFERENCE_WAITING;
     }
 
-    if (ei_microphone_inference_start(continuous_mode ? EI_CLASSIFIER_SLICE_SIZE : EI_CLASSIFIER_RAW_SAMPLE_COUNT) == false) {
+    if (ei_microphone_inference_start(continuous_mode ? EI_CLASSIFIER_SLICE_SIZE : ei_default_impulse.raw_sample_count, inference_channels, ei_default_impulse.frequency) == false) {
         ei_printf("ERR: Could not allocate audio buffer (size %d), this could be due to the window length of your model\r\n", EI_CLASSIFIER_RAW_SAMPLE_COUNT);
         return;
     }
@@ -212,6 +210,7 @@ void ei_stop_impulse(void)
         samples_wr_index = 0;
         run_classifier_deinit();
     }
+    inference_channels = 0;
     state = INFERENCE_STOPPED;
 }
 

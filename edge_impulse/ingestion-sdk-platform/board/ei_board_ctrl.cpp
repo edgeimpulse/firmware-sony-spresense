@@ -11,12 +11,15 @@ KX126 kx126(KX126_DEVICE_ADDRESS_1F);
 
 /* Audio variables */
 static AudioClass *theAudio;
-static const int32_t buffer_size = 1600; /*768sample,1ch,16bit*/
+//static const int32_t buffer_size = 1600; /*768sample,1ch,16bit*/
+static const int32_t buffer_size = 6144; /*768sample,4ch,16bit*/
 
 static File SdFile = NULL; /**< File object */
 
 /* Private functions ------------------------------------------------------- */
 static void empty_audio_fifo(void);
+static int spresense_setupAudio(uint8_t n_channels, uint32_t sampling_freq);
+static void audio_attention_cb(const ErrorAttentionParam *atprm);
 
 /**
  * @brief Init the accelerometer
@@ -48,42 +51,18 @@ int spresense_getAcc(float acc_val[3])
 }
 
 /**
- * @brief Create audio instance and setup audio channel
- * @details Uses PCM format MONO @ 16KHz
- *
- * @return int
- */
-int spresense_setupAudio(void)
-{
-    int retVal = 0;
-
-    theAudio = AudioClass::getInstance();
-
-    retVal = theAudio->begin();
-
-    /* Select input device as microphone */
-    retVal |= theAudio->setRecorderMode(AS_SETRECDR_STS_INPUTDEVICE_MIC, 220, SIMPLE_FIFO_BUF_SIZE, false);
-
-    /*
-    * Set PCM capture sapling rate parameters to 16 kb/s. Set channel mono
-    * Search for PCM codec in "/mnt/sd0/BIN" directory
-    */
-    retVal |= theAudio->initRecorder(AS_CODECTYPE_PCM, "/mnt/sd0/BIN", AS_SAMPLINGRATE_16000, AS_CHANNEL_MONO);
-
-    return retVal;
-}
-
-/**
  * @brief Send command to start recording audio
  *
  */
-bool spresense_startStopAudio(bool start)
+int spresense_startStopAudio(bool start, uint8_t n_channels, uint32_t freq)
 {
-    bool cmdOk = true;
+    int retval = 0;
 
     if (start == true) {
-        cmdOk = spresense_setupAudio() ? false : true;
-        theAudio->startRecorder();
+        retval = spresense_setupAudio(n_channels, freq);
+        if (retval == 0) {
+            theAudio->startRecorder();
+        }
     }
     else {
         theAudio->stopRecorder();
@@ -92,7 +71,7 @@ bool spresense_startStopAudio(bool start)
         theAudio->end();
     }
 
-    return cmdOk;
+    return retval;
 }
 
 /**
@@ -314,4 +293,52 @@ static void empty_audio_fifo(void)
     }
     while (read_size > 0);
     free(s_buffer);
+}
+/**
+ * @brief Create audio instance and setup audio channel
+ * @param n_channels the number of channels
+ * 
+ * @return int
+*/
+static int spresense_setupAudio(uint8_t n_channels, uint32_t sampling_freq)
+{
+    int retVal = 0;
+
+    if (n_channels > EI_AUDIO_N_CHANNELS) {
+        return -1;
+    }
+
+    if ((sampling_freq != AS_SAMPLINGRATE_16000) && (sampling_freq != AS_SAMPLINGRATE_48000)) {
+        return -2;
+    }
+
+    theAudio = AudioClass::getInstance();
+
+    retVal = theAudio->begin(audio_attention_cb);
+
+    /* Select input device as microphone */
+    retVal |= theAudio->setRecorderMode(AS_SETRECDR_STS_INPUTDEVICE_MIC, 220, SIMPLE_FIFO_BUF_SIZE, false);    
+    if (retVal != 0) {
+        return -3;
+    }
+
+    /*
+    * Set PCM capture sapling rate parameters to 16 kb/s. Set n_channels
+    * Search for PCM codec in "/mnt/sd0/BIN" directory
+    */
+    retVal |= theAudio->initRecorder(AS_CODECTYPE_PCM, "/mnt/sd0/BIN", sampling_freq, n_channels);
+
+    return retVal;
+}
+
+/**
+ * @brief 
+ * 
+ * @param atprm 
+ */
+static void audio_attention_cb(const ErrorAttentionParam *atprm)
+{
+    while(1){
+
+    }
 }

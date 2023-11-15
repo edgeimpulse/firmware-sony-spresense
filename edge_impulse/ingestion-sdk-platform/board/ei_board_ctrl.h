@@ -17,13 +17,16 @@
 #ifndef EI_BOARD_CTRL__H_
 #define EI_BOARD_CTRL__H_
 
+/* Include ----------------------------------------------------------------- */
 #include <stdint.h>
+
+/* Global constants -------------------------------------------------------- */
+#define EI_AUDIO_N_CHANNELS     4   /* For Sony can be 1, 2, 4, 6, 8 */
 
 extern bool spresense_init_acc(void);
 extern int spresense_getAcc(float acc_val[3]);
 
-extern int spresense_setupAudio(void);
-extern bool spresense_startStopAudio(bool start);
+extern int spresense_startStopAudio(bool start, uint8_t n_channels, uint32_t freq);
 extern void spresense_pauseAudio(bool pause);
 extern void spresense_closeAudio(void);
 extern bool spresense_getAudio(char *audio_buffer, unsigned int* size);

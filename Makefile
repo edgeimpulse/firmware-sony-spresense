@@ -58,7 +58,6 @@ INC_APP += \
 	-I edge_impulse/ingestion-sdk-platform/sensors \
 	-I edge_impulse/ingestion-sdk-platform/sony-spresense \
 	-I edge_impulse/model-parameters \
-	-I edge_impulse/QCBOR/inc \
 	-I edge_impulse/mbedtls_hmac_sha256_sw \
 	-I edge_impulse/edge-impulse-sdk \
 	-I edge_impulse/edge-impulse-sdk/classifier \
@@ -171,7 +170,6 @@ LDFLAGS = \
 
 # Application flags
 APPFLAGS += \
-	-DEI_SENSOR_AQ_STREAM=FILE \
 	-DEI_PORTING_SONY_SPRESENSE=1 \
 	-DEIDSP_USE_CMSIS_DSP \
 	-DEIDSP_QUANTIZE_FILTERBANK=0 \
@@ -203,6 +201,7 @@ SRC_APP_CXX += \
 	$(notdir $(wildcard edge_impulse/firmware-sdk/*.cpp)) \
 	$(notdir $(wildcard edge_impulse/firmware-sdk/at-server/*.cpp)) \
 	$(notdir $(wildcard edge_impulse/firmware-sdk/jpeg/*.cpp)) \
+	$(notdir $(wildcard edge_impulse/firmware-sdk/sensor-aq/*.cpp)) \
 	$(notdir $(wildcard edge_impulse/edge-impulse-sdk/dsp/dct/*.cpp)) \
 	$(notdir $(wildcard edge_impulse/edge-impulse-sdk/dsp/kissfft/*.cpp)) \
 	$(notdir $(wildcard edge_impulse/edge-impulse-sdk/dsp/image/*.cpp )) \
@@ -243,7 +242,7 @@ SRC_APP_C += \
 	$(notdir $(wildcard edge_impulse/edge-impulse-sdk/CMSIS/NN/Source/ReshapeFunctions/*.c)) \
 	$(notdir $(wildcard edge_impulse/edge-impulse-sdk/CMSIS/NN/Source/SoftmaxFunctions/*.c)) \
 	$(notdir $(wildcard edge_impulse/edge-impulse-sdk/CMSIS/NN/Source/SVDFunctions/*.c)) \
-	$(notdir $(wildcard edge_impulse/QCBOR/src/*.c)) \
+	$(notdir $(wildcard edge_impulse/firmware-sdk/QCBOR/src/*.c)) \
 	$(notdir $(wildcard edge_impulse/mbedtls_hmac_sha256_sw/mbedtls/src/*.c)) \
 	$(notdir $(wildcard edge_impulse/edge-impulse-sdk/tensorflow/lite/c/*.c)) \
 
@@ -252,6 +251,8 @@ VPATH += stdlib \
 	edge_impulse/firmware-sdk \
 	edge_impulse/firmware-sdk/at-server \
 	edge_impulse/firmware-sdk/jpeg \
+	edge_impulse/firmware-sdk/QCBOR/src \
+	edge_impulse/firmware-sdk/sensor-aq \
 	edge_impulse/inference \
 	edge_impulse/ingestion-sdk-c \
 	edge_impulse/ingestion-sdk-platform/board \
@@ -259,7 +260,6 @@ VPATH += stdlib \
 	edge_impulse/ingestion-sdk-platform/sensors \
 	edge_impulse/ingestion-sdk-platform/sensors/commonsense \
 	edge_impulse/ingestion-sdk-platform/sony-spresense \
-	edge_impulse/QCBOR/src \
 	edge_impulse/edge-impulse-sdk/dsp/dct \
 	edge_impulse/edge-impulse-sdk/dsp/image \
 	edge_impulse/edge-impulse-sdk/dsp/kissfft \

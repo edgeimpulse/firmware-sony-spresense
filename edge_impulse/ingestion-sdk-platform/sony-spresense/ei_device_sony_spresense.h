@@ -25,8 +25,8 @@
 class EiDeviceSonySpresense : public EiDeviceInfo {
 private:
     EiDeviceSonySpresense() = delete;
-    static const int sensors_count = 1;
-    ei_device_sensor_t sensors[sensors_count];
+    static const int sensors_count = 4;
+    ei_device_sensor_t sensors[sensors_count] = {0};
     EiState state;
     EiCameraSony* camera;
     bool is_sampling;

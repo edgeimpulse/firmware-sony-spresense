@@ -31,11 +31,16 @@
 /* Function prototypes ----------------------------------------------------- */
 extern void ei_microphone_init(void);
 
-extern bool ei_microphone_inference_start(uint32_t n_samples);
+extern bool ei_microphone_inference_start(uint32_t n_samples, uint8_t n_channels_inference, uint32_t freq);
 extern bool ei_microphone_inference_is_complete(void);
 extern bool ei_microphone_inference_record(void);
 extern void ei_microphone_inference_reset_buffers(void);
 extern bool ei_microphone_inference_end(void);
+
+bool ei_microphone_1ch_start(void);
+bool ei_microphone_2ch_start(void);
+bool ei_microphone_3ch_start(void);
+bool ei_microphone_4ch_start(void);
 
 extern bool ei_microphone_sample_start(void);
 extern int ei_microphone_audio_signal_get_data(size_t offset, size_t length, float *out_ptr);

@@ -1,37 +1,4 @@
-#if MULTI_FREQ_ENABLED == 1
-/**
- * 
- */
-bool EiDeviceNanoBle33::start_multi_sample_thread(void (*sample_multi_read_cb)(uint8_t), float* multi_sample_interval_ms, uint8_t num_fusioned)
-{
-    uint8_t i;
-    uint8_t flag = 0;
-
-    this->sample_multi_read_callback = sample_multi_read_cb;
-    this->fusioning = num_fusioned;
-    this->multi_sample_interval.clear();
-
-    for (i = 0; i < num_fusioned; i++){
-        this->multi_sample_interval.push_back(1.f/multi_sample_interval_ms[i]*1000.f);
-    }
-
-    /* to improve, we consider just a 2 sensors case for now */
-    this->sample_interval = ei_fusion_calc_multi_gcd(this->multi_sample_interval.data(), this->fusioning);
-
-    /* force first reading */
-    for (i = 0; i < this->fusioning; i++){
-            flag |= (1<<i);
-    }
-    this->sample_multi_read_callback(flag);
-
-    this->actual_timer = 0;
-
-    fusion_thread.start(callback(&fusion_queue, &EventQueue::dispatch_forever));
-    fusion_sample_rate.attach(fusion_queue.event(multi_sample_thread), (this->sample_interval/1000.0f));
-
-    return true;
-}
-#endif/*
+/*
  * Copyright (c) 2022 EdgeImpulse Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -68,6 +35,9 @@ bool EiDeviceNanoBle33::start_multi_sample_thread(void (*sample_multi_read_cb)(u
 typedef enum
 {
     MICROPHONE = 0,
+    MICROPHONE_2CH,
+    //MICROPHONE_3CH,
+    MICROPHONE_4CH,
     MAX_USED_SENSOR
 } used_sensors_t;
 
@@ -89,10 +59,29 @@ EiDeviceSonySpresense::EiDeviceSonySpresense(EiDeviceMemory* mem)
         /* Calculate number of bytes available on flash for sampling, reserve 1 block for header + overhead */
     uint32_t available_bytes = ((mem->get_available_sample_blocks() - 1) * mem->block_size);
 
-    sensors[MICROPHONE].name = "Built-in microphone";
-    sensors[MICROPHONE].start_sampling_cb = &ei_microphone_sample_start;
-    sensors[MICROPHONE].max_sample_length_s = available_bytes / (16000 * 2);
+    sensors[MICROPHONE].name = "Microphone";
+    sensors[MICROPHONE].start_sampling_cb = &ei_microphone_1ch_start;
+    sensors[MICROPHONE].max_sample_length_s = available_bytes / (48000 * 2);
     sensors[MICROPHONE].frequencies[0] = 16000.0f;
+    sensors[MICROPHONE].frequencies[1] = 48000.0f;
+
+    sensors[MICROPHONE_2CH].name = "Microphone 2 channels";
+    sensors[MICROPHONE_2CH].start_sampling_cb = &ei_microphone_2ch_start;
+    sensors[MICROPHONE_2CH].max_sample_length_s = available_bytes / (48000 * 4);
+    sensors[MICROPHONE_2CH].frequencies[0] = 16000.0f;
+    sensors[MICROPHONE_2CH].frequencies[1] = 48000.0f;
+
+    // do not expose for now
+    //sensors[MICROPHONE_3CH].name = "Microphone 3 channels";
+    //sensors[MICROPHONE_3CH].start_sampling_cb = &ei_microphone_3ch_start;
+    //sensors[MICROPHONE_3CH].max_sample_length_s = available_bytes / (16000 * 6);
+    //sensors[MICROPHONE_3CH].frequencies[0] = 16000.0f;
+
+    sensors[MICROPHONE_4CH].name = "Microphone 4 channels";
+    sensors[MICROPHONE_4CH].start_sampling_cb = &ei_microphone_4ch_start;
+    sensors[MICROPHONE_4CH].max_sample_length_s = available_bytes / (48000 * 8);
+    sensors[MICROPHONE_4CH].frequencies[0] = 16000.0f;
+    sensors[MICROPHONE_4CH].frequencies[1] = 48000.0f;
 
     /* Init camera instance */
     camera = static_cast<EiCameraSony*>(EiCamera::get_camera());
@@ -365,39 +354,7 @@ bool EiDeviceSonySpresense::stop_stream(void)
     }
 }
 
-
 /* Private functions ------------------------------------------------------- */
-#if 0
-static void timer_callback(void *arg)
-{
-    EiDeviceSonySpresense* dev = static_cast<EiDeviceSonySpresense*>(EiDeviceSonySpresense::get_device());
-
-    static char toggle = 0;
-
-    if (toggle) {
-        switch (dev->get_state()) {
-        case eiStateErasingFlash:
-            spresense_ledcontrol(LED1, 1);
-            break;
-        case eiStateSampling:
-            spresense_ledcontrol(LED2, 1);
-            break;
-        case eiStateUploading:
-            spresense_ledcontrol(LED3, 1);
-            break;
-        default:
-            break;
-        }
-    }
-    else {
-        if (dev->get_state() != eiStateFinished) {
-            spresense_ledcontrol(LEDALL, 0);
-        }
-    }
-    toggle ^= 1;
-}
-#endif
-
 /**
  * @brief 
  * 
