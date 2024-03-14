@@ -61,14 +61,20 @@ int spresense_startStopAudio(bool start, uint8_t n_channels, uint32_t freq)
     if (start == true) {
         retval = spresense_setupAudio(n_channels, freq);
         if (retval == 0) {
-            theAudio->startRecorder();
+            retval = theAudio->startRecorder();
         }
     }
     else {
-        theAudio->stopRecorder();
+        retval = theAudio->stopRecorder();
         empty_audio_fifo();
-        theAudio->setReadyMode();
-        theAudio->end();
+        if (retval != 0) {
+            return retval;
+        }
+        retval = theAudio->setReadyMode();
+        if (retval != 0) {
+            return retval;
+        }
+        retval = theAudio->end();
     }
 
     return retval;
@@ -315,18 +321,21 @@ static int spresense_setupAudio(uint8_t n_channels, uint32_t sampling_freq)
     theAudio = AudioClass::getInstance();
 
     retVal = theAudio->begin(audio_attention_cb);
+    if (retVal != 0) {
+        return retVal;
+    }
 
     /* Select input device as microphone */
-    retVal |= theAudio->setRecorderMode(AS_SETRECDR_STS_INPUTDEVICE_MIC, 220, SIMPLE_FIFO_BUF_SIZE, false);    
+    retVal = theAudio->setRecorderMode(AS_SETRECDR_STS_INPUTDEVICE_MIC, 220, SIMPLE_FIFO_BUF_SIZE, false);    
     if (retVal != 0) {
-        return -3;
+        return retVal;
     }
 
     /*
     * Set PCM capture sapling rate parameters to 16 kb/s. Set n_channels
     * Search for PCM codec in "/mnt/sd0/BIN" directory
     */
-    retVal |= theAudio->initRecorder(AS_CODECTYPE_PCM, "/mnt/sd0/BIN", sampling_freq, n_channels);
+    retVal = theAudio->initRecorder(AS_CODECTYPE_PCM, "/mnt/sd0/BIN", sampling_freq, n_channels);
 
     return retVal;
 }

@@ -58,7 +58,7 @@ bool samples_callback(const void *raw_sample, uint32_t raw_sample_size)
             /* start from beginning of the circular buffer */
             samples_wr_index = 0;
         }
-        if(samples_wr_index >= samples_per_inference) {                
+        if(samples_wr_index >= samples_per_inference) {
             state = INFERENCE_DATA_READY;
             ei_printf("Recording done\n");
             return true;
@@ -66,35 +66,6 @@ bool samples_callback(const void *raw_sample, uint32_t raw_sample_size)
     }
 
     return false;
-}
-
-/**
- * @brief
- */
-static void display_results(ei_impulse_result_t* result)
-{
-    float max = 0.0f;
-    size_t max_ix = 0;
-
-    ei_printf("Predictions (DSP: %d ms., Classification: %d ms., Anomaly: %d ms.): \n",
-        result->timing.dsp, result->timing.classification, result->timing.anomaly);
-    for (size_t ix = 0; ix < EI_CLASSIFIER_LABEL_COUNT; ix++) {            
-        ei_printf("    %s: \t", result->classification[ix].label);
-        ei_printf_float(result->classification[ix].value);
-        ei_printf("\r\n");
-    }
-#if EI_CLASSIFIER_HAS_ANOMALY == 1
-    ei_printf("    anomaly score: ");
-    ei_printf_float(result->anomaly);
-    ei_printf("\r\n");
-#endif
-
-    for (size_t ix = 0; ix < EI_CLASSIFIER_LABEL_COUNT; ix++) {       
-        if (result->classification[ix].value > max) {
-            max = result->classification[ix].value;
-            max_ix = ix;
-        }
-    }
 }
 
 /**
@@ -148,7 +119,7 @@ void ei_run_impulse(void)
     // Create a data structure to represent this window of data
     int err = numpy::signal_from_buffer(samples_circ_buff, EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE, &signal);
     if (err != 0) {
-        ei_printf("ERR: signal_from_buffer failed (%d)\n", err); 
+        ei_printf("ERR: signal_from_buffer failed (%d)\n", err);
     }
 
     // run the impulse: DSP, neural network and the Anomaly algorithm
@@ -194,7 +165,7 @@ void ei_start_impulse(bool continuous, bool debug, bool use_max_uart_speed)
     EiDeviceInfo *dev = EiDeviceInfo::get_device();
 
     const char *axis_name = EI_CLASSIFIER_FUSION_AXES_STRING;
-    
+
     if (!ei_connect_fusion_list(axis_name, AXIS_FORMAT)) {
         ei_printf("ERR: Failed to find sensor '%s' in the sensor list\n", axis_name);
         return;
@@ -252,7 +223,7 @@ void ei_start_impulse(bool continuous, bool debug, bool use_max_uart_speed)
 /**
  * @brief
  */
-void ei_stop_impulse(void) 
+void ei_stop_impulse(void)
 {
     EiDeviceInfo *dev = EiDeviceInfo::get_device();
 

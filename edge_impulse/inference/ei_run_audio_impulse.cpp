@@ -41,13 +41,8 @@ static bool debug_mode = false;
 static int samples_wr_index = 0;
 static uint8_t inference_channels = 0;
 
-static void display_results(ei_impulse_result_t* result);
-/* ------------------------------------------------------------------------- */
-/**
- *
- */
 void ei_run_impulse(void)
-{    
+{
     switch(state) {
         case INFERENCE_STOPPED:
         {
@@ -63,7 +58,7 @@ void ei_run_impulse(void)
             ei_printf("Recording\n");
             state = INFERENCE_SAMPLING;
             ei_microphone_inference_reset_buffers();
-            spresense_pauseAudio(false);            
+            spresense_pauseAudio(false);
             return;
         }
         break;
@@ -74,13 +69,13 @@ void ei_run_impulse(void)
                 if (continuous_mode == false) {
                     spresense_pauseAudio(true);
                     ei_printf("Recording done\n");
-                }                
+                }
             }
             else {
                 return;
             }
         }
-        break;      
+        break;
         case INFERENCE_DATA_READY:
         {
             // nothing to do, just continue to inference provcessing below
@@ -88,15 +83,15 @@ void ei_run_impulse(void)
         break;
         default:
         {
-            
+
         }
         break;
     }
 
     signal_t signal;
-        
-    signal.total_length = continuous_mode ? (EI_CLASSIFIER_SLICE_SIZE * ei_default_impulse.raw_samples_per_frame): ei_default_impulse.dsp_input_frame_size;
-    
+
+    signal.total_length = continuous_mode ? (EI_CLASSIFIER_SLICE_SIZE * ei_default_impulse.impulse->raw_samples_per_frame): ei_default_impulse.impulse->dsp_input_frame_size;
+
     signal.get_data = &ei_microphone_audio_signal_get_data;
 
     // run the impulse: DSP, neural network and the Anomaly algorithm
@@ -124,12 +119,12 @@ void ei_run_impulse(void)
     }
 
     if (continuous_mode == true) {
-        state = INFERENCE_SAMPLING;        
+        state = INFERENCE_SAMPLING;
     }
     else {
         ei_printf("Starting inferencing in 2 seconds...\n");
         last_inference_ts = ei_read_timer_ms();
-        state = INFERENCE_WAITING;        
+        state = INFERENCE_WAITING;
     }
 }
 
@@ -140,11 +135,11 @@ void ei_run_impulse(void)
  * @param use_max_uart_speed
  */
 void ei_start_impulse(bool continuous, bool debug, bool use_max_uart_speed)
-{    
+{
     const float sample_length = 1000.0f * static_cast<float>(EI_CLASSIFIER_RAW_SAMPLE_COUNT) /
                         (1000.0f / static_cast<float>(EI_CLASSIFIER_INTERVAL_MS));
 
-    inference_channels = ei_default_impulse.raw_samples_per_frame;
+    inference_channels = ei_default_impulse.impulse->raw_samples_per_frame;
 
     continuous_mode = continuous;
     debug_mode = debug;
@@ -154,7 +149,7 @@ void ei_start_impulse(bool continuous, bool debug, bool use_max_uart_speed)
     ei_printf("\tInterval: ");
     ei_printf_float(EI_CLASSIFIER_INTERVAL_MS);
     ei_printf("ms.");
-    ei_printf("\tFrame size: %d\n", ei_default_impulse.dsp_input_frame_size);
+    ei_printf("\tFrame size: %d\n", ei_default_impulse.impulse->dsp_input_frame_size);
     ei_printf("\tSample length: ");
     ei_printf_float(sample_length);
     ei_printf(" ms.");
@@ -178,7 +173,7 @@ void ei_start_impulse(bool continuous, bool debug, bool use_max_uart_speed)
         state = INFERENCE_WAITING;
     }
 
-    if (ei_microphone_inference_start(continuous_mode ? EI_CLASSIFIER_SLICE_SIZE : ei_default_impulse.raw_sample_count, inference_channels, ei_default_impulse.frequency) == false) {
+    if (ei_microphone_inference_start(continuous_mode ? EI_CLASSIFIER_SLICE_SIZE : ei_default_impulse.impulse->raw_sample_count, inference_channels, ei_default_impulse.impulse->frequency) == false) {
         ei_printf("ERR: Could not allocate audio buffer (size %d), this could be due to the window length of your model\r\n", EI_CLASSIFIER_RAW_SAMPLE_COUNT);
         return;
     }
@@ -189,24 +184,24 @@ void ei_start_impulse(bool continuous, bool debug, bool use_max_uart_speed)
  */
 void ei_stop_impulse(void)
 {
-    if (state != INFERENCE_STOPPED) {        
+    if (state != INFERENCE_STOPPED) {
 
-        if (continuous_mode == false) 
+        if (continuous_mode == false)
         {
-            if ((state == INFERENCE_SAMPLING)) {                
+            if ((state == INFERENCE_SAMPLING)) {
                 while(ei_microphone_inference_record() == false) {ei_sleep(10);};
                 ei_microphone_inference_end();
             }
             else {
                 spresense_closeAudio();
-            }            
+            }
         }
         else {
             ei_microphone_inference_end();
         }
-        
-        ei_printf("Inferencing stopped by user\r\n");        
-        /* reset samples buffer */        
+
+        ei_printf("Inferencing stopped by user\r\n");
+        /* reset samples buffer */
         samples_wr_index = 0;
         run_classifier_deinit();
     }
@@ -221,25 +216,6 @@ void ei_stop_impulse(void)
 bool is_inference_running(void)
 {
     return (state != INFERENCE_STOPPED);
-}
-/* ------------------------------------------------------------------------- */
-/**
- *
- */
-static void display_results(ei_impulse_result_t* result)
-{
-    ei_printf("Predictions (DSP: %d ms., Classification: %d ms., Anomaly: %d ms.): \n",
-        result->timing.dsp, result->timing.classification, result->timing.anomaly);
-    for (size_t ix = 0; ix < EI_CLASSIFIER_LABEL_COUNT; ix++) {
-        ei_printf("    %s: \t", result->classification[ix].label);
-        ei_printf_float(result->classification[ix].value);
-        ei_printf("\r\n");
-    }
-#if EI_CLASSIFIER_HAS_ANOMALY == 1
-    ei_printf("    anomaly score: ");
-    ei_printf_float(result->anomaly);
-    ei_printf("\r\n");
-#endif
 }
 
 #endif

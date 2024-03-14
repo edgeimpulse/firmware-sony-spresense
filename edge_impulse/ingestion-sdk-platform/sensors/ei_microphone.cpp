@@ -36,11 +36,6 @@
 #include "firmware-sdk/sensor-aq/sensor_aq_none.h"
 
 /* Audio sampling config */
-//#define AUDIO_SAMPLING_FREQUENCY            16000
-//#define AUDIO_SAMPLES_PER_MS                (AUDIO_SAMPLING_FREQUENCY / 1000)
-//#define AUDIO_DSP_SAMPLE_LENGTH_MS          16
-//#define AUDIO_DSP_SAMPLE_RESOLUTION         (sizeof(short))
-//#define AUDIO_DSP_SAMPLE_BUFFER_SIZE        1600//(AUDIO_SAMPLES_PER_MS * AUDIO_DSP_SAMPLE_LENGTH_MS * AUDIO_DSP_SAMPLE_RESOLUTION)
 #define AUDIO_DSP_SAMPLE_BUFFER_SIZE        4800
 
 /** Status and control struct for inferencing struct */
@@ -99,6 +94,7 @@ static void audio_buffer_callback(void *buffer, uint32_t n_bytes);
 static bool create_header(sensor_aq_payload_info *payload);
 static void audio_buffer_inference_callback(void *buffer, uint32_t n_bytes);
 static void get_dsp_data(void (*callback)(void *buffer, uint32_t n_bytes));
+static void ei_microphone_error(int error);
 
 /* Public functions -------------------------------------------------------- */
 /**
@@ -168,10 +164,8 @@ bool ei_microphone_inference_record(void)
 
     get_dsp_data(&audio_buffer_inference_callback);
     if (inference.buf_ready == 1) {
-
         recorded = true;
         inference.buf_ready = 0;
-        inference.buf_count = 0;
     }
 
     return recorded;
@@ -358,9 +352,11 @@ static bool ei_microphone_record(uint32_t sample_length_ms, uint32_t start_delay
             "Starting in %lu ms... (or until all flash was erased)\n",
             start_delay_ms < 2000 ? 2000 : start_delay_ms);
     }
-        
-    if (!spresense_startStopAudio(true, n_audio_channels, freq)) {
-        ei_printf("\r\nERR: Missing DSP binary. Follow steps here https://developer.sony.com/develop/spresense/docs/arduino_tutorials_en.html#_install_dsp_files\r\n");
+    
+    int mic_ret = spresense_startStopAudio(true, n_audio_channels, freq);
+
+    if (mic_ret != 0) {
+        ei_microphone_error(mic_ret);        
         return false;
     }
 
@@ -536,4 +532,37 @@ static bool create_header(sensor_aq_payload_info *payload)
     headerOffset = end_of_header_ix;
 
     return true;
+}
+
+/**
+ * @brief Print error related to audio system
+ * 
+ * @param error 
+ */
+static void ei_microphone_error(int error)
+{
+    switch(error)
+    {
+        case -1:
+        {
+            ei_printf("ERR: %d\r\nInvalid channel number\r\n", error);
+            break;
+        }
+        case -2:
+        {
+            ei_printf("ERR: %d\r\nInvalid sample rate\r\n", error);
+            break;
+        }
+        case 4:
+        {
+            ei_printf("\r\nERR: %d Missing DSP binary. Follow steps here https://developer.sony.com/develop/spresense/docs/arduino_tutorials_en.html#_install_dsp_files\r\n");
+            break;
+        }
+        default:
+        {
+            ei_printf("ERR: %d\r\nPlease visit https://docs.edgeimpulse.com/docs/edge-ai-targets/officially-supported-mcu-targets/sony-spresense for debugging\r\n", error);
+            break;
+        }
+
+    }
 }

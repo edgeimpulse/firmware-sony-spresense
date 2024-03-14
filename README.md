@@ -28,8 +28,13 @@ Edge Impulse enables developers to create the next generation of intelligent dev
 ## Building and flashing the application
 
 1. Run `make` from the root folder to build the project:
+    - Standalone Spresense:
     ```
     $ make -j
+    ```
+    - Spresense + Commonsense:
+    ```
+    $ make commonsense -j
     ```
 1. Connect the board to your computer using USB.  
 1. Flash the board:  

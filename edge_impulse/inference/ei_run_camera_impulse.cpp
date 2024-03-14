@@ -54,12 +54,12 @@ static bool crop_required = false;
 static uint32_t inference_delay;
 
 /**
- * @brief 
- * 
- * @param offset 
- * @param length 
- * @param out_ptr 
- * @return int 
+ * @brief
+ *
+ * @param offset
+ * @param length
+ * @param out_ptr
+ * @return int
  */
 static int ei_camera_get_data(size_t offset, size_t length, float *out_ptr)
 {
@@ -82,8 +82,8 @@ static int ei_camera_get_data(size_t offset, size_t length, float *out_ptr)
 }
 
 /**
- * @brief 
- * 
+ * @brief
+ *
  */
 void ei_run_impulse(void)
 {
@@ -106,7 +106,7 @@ void ei_run_impulse(void)
         default:
             break;
     }
-         
+
     // if we have to resize, then allocate bigger buffer
     // (resize means camera can't get big enough spanshot)
     if(resize_required) {
@@ -126,9 +126,9 @@ void ei_run_impulse(void)
     EiCameraSony *camera = static_cast<EiCameraSony*>(EiCameraSony::get_camera());
 
     ei_printf("Taking photo...\n");
-    
+
     bool isOK = camera->get_stream(snapshot_buf, snapshot_buf_size);
-    
+
     if (!isOK) {
         return;
     }
@@ -151,7 +151,7 @@ void ei_run_impulse(void)
     if (debug_mode) {
         ei_printf("Begin output\n");
         ei_printf("Framebuffer: ");
-        
+
         int ret = encode_rgb888_signal_as_jpg_and_output_base64(&signal, EI_CLASSIFIER_INPUT_WIDTH, EI_CLASSIFIER_INPUT_HEIGHT);
         ei_printf("\r\n");
 
@@ -171,31 +171,7 @@ void ei_run_impulse(void)
     }
     ei_free(snapshot_buf);
 
-    // print the predictions
-    ei_printf("Predictions (DSP: %d ms., Classification: %d ms., Anomaly: %d ms.): \n",
-                result.timing.dsp, result.timing.classification, result.timing.anomaly);
-#if EI_CLASSIFIER_OBJECT_DETECTION == 1
-    bool bb_found = result.bounding_boxes[0].value > 0;
-    for (size_t ix = 0; ix < result.bounding_boxes_count; ix++) {
-        auto bb = result.bounding_boxes[ix];
-        if (bb.value == 0) {
-            continue;
-        }
-        ei_printf("    %s (%f) [ x: %lu, y: %lu, width: %lu, height: %ld ]\n", bb.label, bb.value, bb.x, bb.y, bb.width, bb.height);
-    }
-    if (!bb_found) {
-        ei_printf("    No objects found\n");
-    }
-#else
-    for (size_t ix = 0; ix < EI_CLASSIFIER_LABEL_COUNT; ix++) {
-        ei_printf("    %s: %.5f\n", result.classification[ix].label,
-                                    result.classification[ix].value);
-    }
-
-#if EI_CLASSIFIER_HAS_ANOMALY == 1
-        ei_printf("    anomaly score: %.3f\n", result.anomaly);
-#endif
-#endif
+    display_results(&result);
 
     if (debug_mode) {
         ei_printf("\r\n----------------------------------\r\n");
@@ -209,11 +185,11 @@ void ei_run_impulse(void)
 }
 
 /**
- * @brief 
- * 
- * @param continuous 
- * @param debug 
- * @param use_max_uart_speed 
+ * @brief
+ *
+ * @param continuous
+ * @param debug
+ * @param use_max_uart_speed
  */
 void ei_start_impulse(bool continuous, bool debug, bool use_max_uart_speed)
 {
@@ -258,7 +234,7 @@ void ei_start_impulse(bool continuous, bool debug, bool use_max_uart_speed)
 
     if (cam->start_stream(snapshot_resolution.width, snapshot_resolution.height, e_inference_stream) == false) {
         ei_printf("Error in starting stream\n");
-        return;        
+        return;
     }
 
     // summary of inferencing settings (from model_metadata.h)
@@ -287,8 +263,8 @@ void ei_start_impulse(bool continuous, bool debug, bool use_max_uart_speed)
 }
 
 /**
- * @brief 
- * 
+ * @brief
+ *
  */
 void ei_stop_impulse(void)
 {
@@ -303,17 +279,17 @@ void ei_stop_impulse(void)
         dev->set_default_data_output_baudrate();
         ei_sleep(100);
     }
-    
-    ei_printf("Inferencing stopped by user\r\n");    
+
+    ei_printf("Inferencing stopped by user\r\n");
 
     state = INFERENCE_STOPPED;
 }
 
 /**
- * @brief 
- * 
- * @return true 
- * @return false 
+ * @brief
+ *
+ * @return true
+ * @return false
  */
 bool is_inference_running(void)
 {
