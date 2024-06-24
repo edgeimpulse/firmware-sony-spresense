@@ -33,6 +33,8 @@
  *
  ******/
 
+#define TRANSFER_BUF_LEN 32
+
 static EiDeviceSonySpresense *dev;
 
 static bool at_get_snapshot(void);
@@ -58,6 +60,20 @@ static bool at_unlink_file(const char **argv, const int argc);
 
 static void respond_and_change_to_max_baud(void);
 static void change_to_normal_baud(void);
+
+/**
+ * @brief Check number of arguments and print error message if needed
+*/
+static inline bool check_args_num(const int &required, const int &received)
+{
+    if (received < required) {
+        ei_printf("Too few arguments! Required: %d\n", required);
+        return false;
+    }
+
+    return true;
+}
+
 /**
  * @brief 
  * 
@@ -434,9 +450,16 @@ static bool at_run_nn_normal_cont(void)
  */
 static bool at_run_impulse_static_data(const char **argv, const int argc)
 {
-    // TODO
+    if (check_args_num(2, argc) == false) {
+        return false;
+    }
 
-    return false;
+    bool debug = (argv[0][0] == 'y');
+    size_t length = (size_t)atoi(argv[1]);
+
+    bool res = run_impulse_static_data(debug, length, TRANSFER_BUF_LEN);
+
+    return res;
 }
 
 /**
