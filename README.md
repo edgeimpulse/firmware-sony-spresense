@@ -20,8 +20,8 @@ Edge Impulse enables developers to create the next generation of intelligent dev
 
 ### Software
 
-* [Edge Impulse CLI](https://docs.edgeimpulse.com/docs/cli-installation).  
-* [GNU Make](https://www.gnu.org/software/make/).  
+* [Edge Impulse CLI](https://docs.edgeimpulse.com/docs/cli-installation).
+* [GNU Make](https://www.gnu.org/software/make/).
 * [GNU ARM Embedded Toolchain 9-2019-q4-major](https://developer.arm.com/tools-and-software/open-source-software/developer-tools/gnu-toolchain/gnu-rm/downloads) - make sure `arm-none-eabi-gcc` is in your PATH.
 * [Python 3](https://www.python.org/download/releases/3.0/).
 
@@ -30,14 +30,15 @@ Edge Impulse enables developers to create the next generation of intelligent dev
 1. Run `make` from the root folder to build the project:
     - Standalone Spresense:
     ```
-    $ make -j
+    $ make -j4
     ```
     - Spresense + Commonsense:
     ```
-    $ make commonsense -j
+    $ make commonsense -j4
     ```
-1. Connect the board to your computer using USB.  
-1. Flash the board:  
+    Replace 4 with a number of parallel build processes suitable for your system.
+1. Connect the board to your computer using USB.
+1. Flash the board:
     ```
     $ make flash
     ```
@@ -48,7 +49,7 @@ Edge Impulse enables developers to create the next generation of intelligent dev
     ```
     $ docker build -t spresense-build .
     ```
-1. Build the application by running the container as follows:  
+1. Build the application by running the container as follows:
     **Windows**
     ```
     $ docker run --rm -it -v "%cd%":/app spresense-build /bin/bash -c "make -j"
@@ -57,7 +58,7 @@ Edge Impulse enables developers to create the next generation of intelligent dev
     ```
     $ docker run --rm -it -v $PWD:/app:delegated spresense-build /bin/bash -c "make -j"
     ```
-1. Connect the board to your computer using USB.  
+1. Connect the board to your computer using USB.
 1. Flash the board:
     ```
     $ make flash
