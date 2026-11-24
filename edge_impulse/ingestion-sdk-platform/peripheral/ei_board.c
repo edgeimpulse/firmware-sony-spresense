@@ -41,6 +41,7 @@
 #include <arch/chip/scu.h>
 #include <arch/chip/adc.h>
 #include <sys/boardctl.h>
+#include <sys/ioctl.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stddef.h>
